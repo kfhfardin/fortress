@@ -5,7 +5,7 @@
 
 ### Stealth Chromium engine
 
-**Fingerprint coherence compiled into Chromium's C++ — realm-invariant, native-code parity, driven by the Playwright or Puppeteer you already use.**
+**Stop getting blocked — without `puppeteer-stealth`.** JS stealth patches self-reveal: the page checks whether the getter is native code and catches the override. Fortress compiles the fingerprint correction into Chromium's **C++**, so a page inspecting itself sees stock Chrome. Drop it in under the Playwright or Puppeteer you already use.
 
 <sub>**Blink · V8 · BoringSSL** patched in-tree · **ANGLE / D3D11**-backed WebGL · **JA3/JA4-coherent** TLS · **monthly** upstream rebase · **reproducible, gauntlet-gated** releases</sub>
 
@@ -180,6 +180,27 @@ from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
     browser = p.chromium.connect_over_cdp("http://localhost:9222")   # Fortress under the hood
 ```
+
+---
+
+### Use it with your AI agent
+
+Building an agent that browses? Fortress *is* the browser — raw CDP on `:9222`, no stealth plugins to wire up. **Copy the prompt below into Claude Code, Cursor, or any coding agent** (hover the block, hit the copy button) and it wires everything up:
+
+```text
+Set up Fortress (open-source stealth Chromium) for my browser automation.
+1. Launch:  docker run -d --rm -p 9222:9222 arham766/fortress:latest
+2. Connect my Playwright/Puppeteer code over CDP to http://localhost:9222
+   (Python: chromium.connect_over_cdp("http://localhost:9222")
+    Node:   puppeteer.connect({ browserURL: "http://localhost:9222" }))
+3. Keep my existing automation logic — just point the browser at that endpoint.
+Do NOT add puppeteer-stealth or JS fingerprint patches — Fortress spoofs the fingerprint in the
+engine's C++; extra JS patching self-reveals and undoes it. If a site still blocks me, it's the IP
+(datacenter), not the fingerprint — route egress through a residential proxy.
+Reference: https://github.com/tiliondev/fortress/blob/main/AGENTS.md
+```
+
+Full agent guide → **[AGENTS.md](AGENTS.md)**
 
 ---
 
