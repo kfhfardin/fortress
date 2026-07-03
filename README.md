@@ -144,6 +144,14 @@ await f.close();
 
 <sub>Same residential IP, same site (<b>aa.com</b> · Akamai Bot Manager). A stock/headless browser gets <b>Access Denied</b> (Reference&nbsp;#); Fortress loads the real page and Akamai issues its <code>_abck</code> sensor cookie — the Bot Manager accepts it as a real browser. The variable is the <b>fingerprint</b>, not the IP.</sub>
 
+<table><tr>
+<td align="center" width="33%"><img src="docs/assets/fortress-akamai-lowes.gif" width="250" alt="Fortress clearing Akamai on lowes.com"/><br/><sub><b>lowes.com</b> · blocked → cleared</sub></td>
+<td align="center" width="33%"><img src="docs/assets/fortress-akamai-macys.gif" width="250" alt="Fortress clearing Akamai on macys.com"/><br/><sub><b>macys.com</b> · blocked → cleared</sub></td>
+<td align="center" width="33%"><img src="docs/assets/fortress-akamai-kohls.gif" width="250" alt="Fortress clearing Akamai on kohls.com"/><br/><sub><b>kohls.com</b> · blocked → cleared</sub></td>
+</tr></table>
+
+<sub>Not a one-site fluke — same before/after on major Akamai-protected retailers, every run from the same residential IP.</sub>
+
 </div>
 
 ---
