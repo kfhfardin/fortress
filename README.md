@@ -12,12 +12,12 @@ Stealth Chromium engine
 <sub>**Blink · V8 · BoringSSL** patched in-tree · **ANGLE / D3D11**-backed WebGL · **JA3/JA4-coherent** TLS · **monthly** upstream rebase · **reproducible, gauntlet-gated** releases</sub>
 
 [![Chromium](https://img.shields.io/badge/chromium-151.0.7908.0-4285F4?logo=googlechrome&logoColor=white)](CHROMIUM_VERSION)
-[![PyPI downloads](https://img.shields.io/pypi/dm/tilion-fortress?logo=pypi&logoColor=white&label=downloads)](https://pypi.org/project/tilion-fortress/)
-[![npm downloads](https://img.shields.io/npm/dm/tilion-fortress?logo=npm&label=downloads)](https://www.npmjs.com/package/tilion-fortress)
+[![pip](https://img.shields.io/pypi/dm/tilion-fortress?logo=pypi&logoColor=white&label=pip)](https://pypi.org/project/tilion-fortress/)
+[![npm](https://img.shields.io/npm/dm/tilion-fortress?logo=npm&label=npm)](https://www.npmjs.com/package/tilion-fortress)
 [![Docker pulls](https://img.shields.io/docker/pulls/tilion/fortress?logo=docker&logoColor=white&label=pulls)](https://hub.docker.com/r/tilion/fortress)
+
 [![CreepJS](https://img.shields.io/badge/CreepJS-0%25%20headless-2ea44f)](docs/GAUNTLET_RESULTS.md)
 [![Runtime.enable leak](https://img.shields.io/badge/Runtime.enable-no%20leak-2ea44f)](docs/GAUNTLET_RESULTS.md)
-[![Stars](https://img.shields.io/github/stars/tiliondev/fortress?style=social)](https://github.com/tiliondev/fortress/stargazers)
 
 [![Copy for agent](https://img.shields.io/badge/Copy%20for%20agent-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/AGENTS.md) [![llms.txt](https://img.shields.io/badge/llms.txt-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/llms.txt)
 
