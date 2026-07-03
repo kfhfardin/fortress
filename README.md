@@ -136,6 +136,16 @@ await f.close();
 
 </div>
 
+<div align="center">
+
+### Clears real Akamai — before / after
+
+<img src="docs/assets/fortress-akamai.gif" width="760" alt="Before: a stock browser is blocked by Akamai on aa.com with Access Denied. After: Fortress loads the real page and Akamai's sensor accepts it."/>
+
+<sub>Same residential IP, same site (<b>aa.com</b> · Akamai Bot Manager). A stock/headless browser gets <b>Access Denied</b> (Reference&nbsp;#); Fortress loads the real page and Akamai issues its <code>_abck</code> sensor cookie — the Bot Manager accepts it as a real browser. The variable is the <b>fingerprint</b>, not the IP.</sub>
+
+</div>
+
 ---
 
 ## Quick start
