@@ -1,0 +1,47 @@
+name: Bug report
+description: Something in Fortress or the SDKs is broken (not a detection vector)
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a page that *fingerprints* Fortress, use the "Detection vector" template instead.
+        For a security issue (crash, sandbox escape, host leak), do not file here — see SECURITY.md.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what actually happened.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. docker run -p 9222:9222 tilion/fortress:latest
+        2. connect_over_cdp("http://localhost:9222")
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Docker tag, pip/npm version, or bundle + Chromium version.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      placeholder: "macOS 14 arm64 / Ubuntu 24.04 x64 / Windows 11"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Any relevant output.
+      render: shell

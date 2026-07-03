@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/tiliondev/fortress/security/advisories/new
+    about: Report a crash, sandbox escape, or host leak privately (see SECURITY.md) — not a public issue.
+  - name: Question or usage help
+    url: https://github.com/tiliondev/fortress/discussions
+    about: Ask how to set Fortress up or drive it — see AGENTS.md first.
