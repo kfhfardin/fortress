@@ -6,9 +6,9 @@ index 2df79076df..a238b67b7c 100644
  #include "base/metrics/histogram_macros.h"
  #include "base/notimplemented.h"
  #include "base/numerics/checked_math.h"
-+#include "base/command_line.h"  // TILION
++#include "base/command_line.h"  // FORTRESS
 +#include "base/uxr_config.h"
-+#include "base/strings/string_number_conversions.h"  // TILION
++#include "base/strings/string_number_conversions.h"  // FORTRESS
  #include "base/strings/stringprintf.h"
  #include "base/synchronization/lock.h"
  #include "base/task/single_thread_task_runner.h"
@@ -16,10 +16,10 @@ index 2df79076df..a238b67b7c 100644
  
  namespace {
  
-+// TILION Layer 2: seeded sub-pixel farble of WebGL readback so the render-hash is
++// FORTRESS Layer 2: seeded sub-pixel farble of WebGL readback so the render-hash is
 +// non-constant per session and not a known-attributable (SwiftShader) hash. PARTIAL
 +// mitigation only: matching a CLAIMED GPU hash still needs a real GPU. Keyed to the
-+// shared visual seed --tilion-canvas-seed (same as canvas 2D).
++// shared visual seed --uxr-canvas-seed (same as canvas 2D).
 +void UxrFarbleReadPixels(uint8_t* data, size_t n) {
 +  if (n == 0u || data == nullptr) {
 +    return;
@@ -55,9 +55,9 @@ index 2df79076df..a238b67b7c 100644
    if (isContextLost())
      return ScriptValue::CreateNull(script_state->GetIsolate());
    const int kIntZero = 0;
-+  // TILION patch #3b: coherent WebGL persona (full-params, not string-only).
++  // FORTRESS patch #3b: coherent WebGL persona (full-params, not string-only).
 +  // Detectors read the numeric getParameter limits and cross-check them vs the
-+  // renderer string (rules C2/C3). When --tilion-webgl-fullparams is set we return
++  // renderer string (rules C2/C3). When --uxr-webgl-fullparams is set we return
 +  // values coherent with a real NVIDIA desktop GPU (ANGLE-D3D11).
 +  {
 +    if ((base::UxrConfig::GetInstance().Has("uxr-webgl-fullparams") || base::UxrConfig::GetInstance().Has("uxr-webgl-renderer"))) {
@@ -91,7 +91,7 @@ index 2df79076df..a238b67b7c 100644
        return GetBooleanParameter(script_state, pname);
      case GL_SHADING_LANGUAGE_VERSION:
 +      {
-+        // TILION: kill real-backend GLSL leak; match real Chrome normalized form.
++        // FORTRESS: kill real-backend GLSL leak; match real Chrome normalized form.
 +        if ((base::UxrConfig::GetInstance().Has("uxr-webgl-fullparams") || base::UxrConfig::GetInstance().Has("uxr-webgl-renderer")))
 +          return WebGLAny(script_state,
 +              String("WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)"));
@@ -104,7 +104,7 @@ index 2df79076df..a238b67b7c 100644
        return WebGLAny(script_state, String("WebKit"));
      case GL_VERSION:
 +      {
-+        // TILION: kill real-backend driver leak (SwiftShader/host GL). Real Chrome
++        // FORTRESS: kill real-backend driver leak (SwiftShader/host GL). Real Chrome
 +        // reports the normalized "OpenGL ES 2.0 Chromium" form regardless of GPU.
 +        if ((base::UxrConfig::GetInstance().Has("uxr-webgl-fullparams") || base::UxrConfig::GetInstance().Has("uxr-webgl-renderer")))
 +          return WebGLAny(script_state, String("WebGL 1.0 (OpenGL ES 2.0 Chromium)"));
@@ -118,7 +118,7 @@ index 2df79076df..a238b67b7c 100644
        if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
 -        return WebGLAny(script_state,
 -                        String(ContextGL()->GetString(GL_RENDERER)));
-+        // TILION patch #3: switch-driven renderer (dynamic persona).
++        // FORTRESS patch #3: switch-driven renderer (dynamic persona).
 +        {
 +          if (base::UxrConfig::GetInstance().Has("uxr-webgl-renderer"))
 +            return WebGLAny(script_state, String(base::UxrConfig::GetInstance().Get("uxr-webgl-renderer").c_str()));
@@ -136,7 +136,7 @@ index 2df79076df..a238b67b7c 100644
        if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
 -        return WebGLAny(script_state,
 -                        String(ContextGL()->GetString(GL_VENDOR)));
-+        // TILION patch #3: switch-driven vendor (dynamic persona).
++        // FORTRESS patch #3: switch-driven vendor (dynamic persona).
 +        {
 +          if (base::UxrConfig::GetInstance().Has("uxr-webgl-vendor"))
 +            return WebGLAny(script_state, String(base::UxrConfig::GetInstance().Get("uxr-webgl-vendor").c_str()));
@@ -149,7 +149,7 @@ index 2df79076df..a238b67b7c 100644
        return nullptr;
    }
  
-+  // TILION: real-NVIDIA-desktop precision when persona active (float 127/127/23,
++  // FORTRESS: real-NVIDIA-desktop precision when persona active (float 127/127/23,
 +  // int 31/30/0). Detectors hash getShaderPrecisionFormat alongside the GPU string.
 +  if (base::UxrConfig::GetInstance().Has("uxr-webgl-fullparams") ||
 +      base::UxrConfig::GetInstance().Has("uxr-webgl-renderer")) {
@@ -166,7 +166,7 @@ index 2df79076df..a238b67b7c 100644
        return;
      }
      ContextGL()->ReadPixels(x, y, width, height, format, type, data);
-+    UxrFarbleReadPixels(data, static_cast<size_t>(buffer_size.ValueOrDie()));  // TILION
++    UxrFarbleReadPixels(data, static_cast<size_t>(buffer_size.ValueOrDie()));  // FORTRESS
    }
  }
  

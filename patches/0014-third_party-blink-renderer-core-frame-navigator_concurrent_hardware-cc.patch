@@ -6,17 +6,17 @@ index f5c0db2d1b..2ce917a9c4 100644
  
  #include "base/system/sys_info.h"
  
-+#include <cstdlib>  // TILION
-+#include "base/command_line.h"  // TILION
++#include <cstdlib>  // FORTRESS
++#include "base/command_line.h"  // FORTRESS
 +#include "base/uxr_config.h"
 +#include "base/strings/string_number_conversions.h"
 +
  namespace blink {
  
  unsigned NavigatorConcurrentHardware::hardwareConcurrency() const {
-+  // TILION Layer 2: persona-driven via renderer cmdline switch.
++  // FORTRESS Layer 2: persona-driven via renderer cmdline switch.
 +  if (base::UxrConfig::GetInstance().Has("uxr-hw-concurrency")) {
-+    int v = 0;  // TILION P1-A: StringToInt + clamp [1,128]
++    int v = 0;  // FORTRESS P1-A: StringToInt + clamp [1,128]
 +    if (base::StringToInt(
 +            base::UxrConfig::GetInstance().Get("uxr-hw-concurrency"), &v) &&
 +        v > 0)
