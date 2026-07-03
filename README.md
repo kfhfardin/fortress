@@ -12,8 +12,8 @@ Stealth Chromium engine
 <sub>**Blink · V8 · BoringSSL** patched in-tree · **ANGLE / D3D11**-backed WebGL · **JA3/JA4-coherent** TLS · **monthly** upstream rebase · **reproducible, gauntlet-gated** releases</sub>
 
 [![Chromium](https://img.shields.io/badge/chromium-151.0.7908.0-4285F4?logo=googlechrome&logoColor=white)](CHROMIUM_VERSION)
-[![pip](https://img.shields.io/pypi/dm/tilion-fortress?logo=pypi&logoColor=white&label=pip)](https://pypi.org/project/tilion-fortress/)
-[![npm](https://img.shields.io/npm/dm/tilion-fortress?logo=npm&label=npm)](https://www.npmjs.com/package/tilion-fortress)
+[![pip](https://img.shields.io/badge/pip-3776AB?logo=pypi&logoColor=white)](https://pypi.org/project/tilion-fortress/)
+[![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/tilion-fortress)
 [![Docker pulls](https://img.shields.io/docker/pulls/tilion/fortress?logo=docker&logoColor=white&label=pulls)](https://hub.docker.com/r/tilion/fortress)
 
 [![CreepJS](https://img.shields.io/badge/CreepJS-0%25%20headless-2ea44f)](docs/GAUNTLET_RESULTS.md)
