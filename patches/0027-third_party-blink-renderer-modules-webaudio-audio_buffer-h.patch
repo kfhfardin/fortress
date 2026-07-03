@@ -7,7 +7,7 @@ index 4bbf70b439..d0880beb8b 100644
  
    HeapVector<Member<DOMFloat32Array>> channels_;
 +
-+  // TILION Layer 2: one-time seeded sub-perceptual farble of the channel data,
++  // FORTRESS Layer 2: one-time seeded sub-perceptual farble of the channel data,
 +  // applied on the JS read path (after render) so the audio fingerprint is stable
 +  // per session-seed and unique across seeds. Inaudible (~2e-7).
 +  void MaybeFarbleForUxr();

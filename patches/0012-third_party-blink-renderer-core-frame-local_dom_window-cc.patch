@@ -15,7 +15,7 @@ index 3761d36b53..b39e4bd028 100644
    if (!GetFrame())
      return 0;
  
-+  {  // TILION: persona outer height (fixes outerHeight===innerHeight headless tell)
++  {  // FORTRESS: persona outer height (fixes outerHeight===innerHeight headless tell)
 +    int p_v = 0;
 +    if (base::UxrConfig::GetInstance().GetInt("uxr-outer-height", &p_v) && p_v > 0)
 +      return p_v;
@@ -28,7 +28,7 @@ index 3761d36b53..b39e4bd028 100644
    if (!GetFrame())
      return 0;
  
-+  {  // TILION: persona outer width
++  {  // FORTRESS: persona outer width
 +    int p_v = 0;
 +    if (base::UxrConfig::GetInstance().GetInt("uxr-outer-width", &p_v) && p_v > 0)
 +      return p_v;
@@ -41,7 +41,7 @@ index 3761d36b53..b39e4bd028 100644
    if (!GetFrame())
      return 0.0;
  
-+  if (base::UxrConfig::GetInstance().Has("uxr-device-pixel-ratio")) {  // TILION
++  if (base::UxrConfig::GetInstance().Has("uxr-device-pixel-ratio")) {  // FORTRESS
 +    double p_dpr = 0.0;
 +    if (base::StringToDouble(
 +            base::UxrConfig::GetInstance().Get("uxr-device-pixel-ratio"), &p_dpr) &&
