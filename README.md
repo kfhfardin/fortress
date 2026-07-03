@@ -12,15 +12,14 @@ Stealth Chromium engine
 <sub>**Blink · V8 · BoringSSL** patched in-tree · **ANGLE / D3D11**-backed WebGL · **JA3/JA4-coherent** TLS · **monthly** upstream rebase · **reproducible, gauntlet-gated** releases</sub>
 
 [![Chromium](https://img.shields.io/badge/chromium-151.0.7908.0-4285F4?logo=googlechrome&logoColor=white)](CHROMIUM_VERSION)
-[![PyPI](https://img.shields.io/pypi/v/tilion-fortress?logo=pypi&logoColor=white&label=pip)](https://pypi.org/project/tilion-fortress/)
-[![npm](https://img.shields.io/npm/v/tilion-fortress?logo=npm&label=npm)](https://www.npmjs.com/package/tilion-fortress)
-[![Docker image size](https://img.shields.io/docker/image-size/tilion/fortress/latest?logo=docker&logoColor=white&label=docker%20image)](https://hub.docker.com/r/tilion/fortress)
+[![PyPI downloads](https://img.shields.io/pypi/dm/tilion-fortress?logo=pypi&logoColor=white&label=downloads)](https://pypi.org/project/tilion-fortress/)
+[![npm downloads](https://img.shields.io/npm/dm/tilion-fortress?logo=npm&label=downloads)](https://www.npmjs.com/package/tilion-fortress)
+[![Docker pulls](https://img.shields.io/docker/pulls/tilion/fortress?logo=docker&logoColor=white&label=pulls)](https://hub.docker.com/r/tilion/fortress)
 [![CreepJS](https://img.shields.io/badge/CreepJS-0%25%20headless-2ea44f)](docs/GAUNTLET_RESULTS.md)
 [![Runtime.enable leak](https://img.shields.io/badge/Runtime.enable-no%20leak-2ea44f)](docs/GAUNTLET_RESULTS.md)
-[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/tiliondev/fortress?style=social)](https://github.com/tiliondev/fortress/stargazers)
 
-[![Ask ChatGPT](https://img.shields.io/badge/Ask-ChatGPT-10A37F?logo=openai&logoColor=white)](https://chatgpt.com/?q=Help%20me%20set%20up%20Fortress%2C%20an%20open-source%20stealth%20Chromium%20engine%2C%20for%20my%20browser%20automation.%20First%20read%20the%20setup%20guide%20at%20https%3A%2F%2Fgithub.com%2Ftiliondev%2Ffortress%2Fblob%2Fmain%2FAGENTS.md%20then%20walk%20me%20through%3A%201%29%20launching%20Fortress%20%28Docker%3A%20docker%20run%20-d%20--rm%20-p%209222%3A9222%20tilion%2Ffortress%3Alatest%2C%20or%20pip%2Fnpm%20install%20tilion-fortress%29%2C%202%29%20connecting%20my%20Playwright%20or%20Puppeteer%20code%20over%20CDP%20to%20http%3A%2F%2Flocalhost%3A9222%2C%203%29%20keeping%20my%20existing%20automation%20logic.%20Do%20NOT%20add%20puppeteer-stealth%20or%20JS%20fingerprint%20patches%20%E2%80%94%20Fortress%20spoofs%20the%20fingerprint%20in%20the%20engine%27s%20C%2B%2B.) [![Ask Claude](https://img.shields.io/badge/Ask-Claude-D97757?logo=claude&logoColor=white)](https://claude.ai/new?q=Help%20me%20set%20up%20Fortress%2C%20an%20open-source%20stealth%20Chromium%20engine%2C%20for%20my%20browser%20automation.%20First%20read%20the%20setup%20guide%20at%20https%3A%2F%2Fgithub.com%2Ftiliondev%2Ffortress%2Fblob%2Fmain%2FAGENTS.md%20then%20walk%20me%20through%3A%201%29%20launching%20Fortress%20%28Docker%3A%20docker%20run%20-d%20--rm%20-p%209222%3A9222%20tilion%2Ffortress%3Alatest%2C%20or%20pip%2Fnpm%20install%20tilion-fortress%29%2C%202%29%20connecting%20my%20Playwright%20or%20Puppeteer%20code%20over%20CDP%20to%20http%3A%2F%2Flocalhost%3A9222%2C%203%29%20keeping%20my%20existing%20automation%20logic.%20Do%20NOT%20add%20puppeteer-stealth%20or%20JS%20fingerprint%20patches%20%E2%80%94%20Fortress%20spoofs%20the%20fingerprint%20in%20the%20engine%27s%20C%2B%2B.) [![Ask Gemini](https://img.shields.io/badge/Ask-Gemini-1C69FF?logo=googlegemini&logoColor=white)](https://gemini.google.com/app?q=Help%20me%20set%20up%20Fortress%2C%20an%20open-source%20stealth%20Chromium%20engine%2C%20for%20my%20browser%20automation.%20First%20read%20the%20setup%20guide%20at%20https%3A%2F%2Fgithub.com%2Ftiliondev%2Ffortress%2Fblob%2Fmain%2FAGENTS.md%20then%20walk%20me%20through%3A%201%29%20launching%20Fortress%20%28Docker%3A%20docker%20run%20-d%20--rm%20-p%209222%3A9222%20tilion%2Ffortress%3Alatest%2C%20or%20pip%2Fnpm%20install%20tilion-fortress%29%2C%202%29%20connecting%20my%20Playwright%20or%20Puppeteer%20code%20over%20CDP%20to%20http%3A%2F%2Flocalhost%3A9222%2C%203%29%20keeping%20my%20existing%20automation%20logic.%20Do%20NOT%20add%20puppeteer-stealth%20or%20JS%20fingerprint%20patches%20%E2%80%94%20Fortress%20spoofs%20the%20fingerprint%20in%20the%20engine%27s%20C%2B%2B.) [![Copy for agent](https://img.shields.io/badge/Copy%20for%20agent-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/AGENTS.md) [![llms.txt](https://img.shields.io/badge/llms.txt-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/llms.txt)
+[![Copy for agent](https://img.shields.io/badge/Copy%20for%20agent-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/AGENTS.md) [![llms.txt](https://img.shields.io/badge/llms.txt-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/llms.txt)
 
 <table align="center"><tr>
 <td align="center" width="150"><h3>34</h3><sub>single-surface<br/>C++ patches</sub></td>
@@ -147,7 +146,6 @@ await f.close();
 
 ## Quick start
 
-<div align="center"><img src="docs/assets/install-strip.svg" alt="pip install tilion-fortress: CreepJS 0%, Sannysoft all-green, BrowserScan human" width="100%"/></div>
 
 ```bash
 # Python / Node: prebuilt native binary auto-fetched (Linux x64 & Windows x64), SHA-256 verified
