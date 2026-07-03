@@ -1,0 +1,71 @@
+name: ci
+
+# Fast, build-free gates that run on every push and PR. None of these compile Chromium
+# (that is a multi-hour job) — they guard the patch set's invariants and the SDK logic,
+# which is where cheap mistakes actually happen.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch-integrity:
+    name: patch-set integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Lint the patch series
+        run: python tools/check_patches.py
+
+  sdk-python:
+    name: python sdk tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pytest
+        run: python -m pip install --upgrade pip pytest
+      - name: Import smoke test
+        run: python -c "import sys; sys.path.insert(0, 'sdk/python'); import tilion_fortress; print(tilion_fortress.__version__)"
+      - name: Run unit tests
+        run: python -m pytest sdk/python/tests -q
+
+  shell:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shellcheck build + packaging scripts
+        # --severity=error: fail only on real bugs, not pre-existing style nits.
+        run: |
+          shopt -s globstar nullglob
+          shellcheck --severity=error build/**/*.sh packaging/**/*.sh
+
+  node-sdk:
+    name: node sdk syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntax-check the CLI + library
+        run: |
+          node --check sdk/node/index.js
+          node --check sdk/node/cli.js
