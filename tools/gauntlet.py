@@ -12,7 +12,7 @@ Usage:
 No third-party deps — raw CDP over a hand-rolled WebSocket so it runs anywhere
 Python 3 does.
 """
-import argparse, base64, json, os, socket, struct, subprocess, sys, time, http.client
+import argparse, base64, json, os, shutil, socket, struct, subprocess, sys, tempfile, time, http.client
 
 
 def ws_eval(port, expr, timeout=20):
@@ -68,16 +68,21 @@ def main():
     ap.add_argument("--keep", action="store_true", help="leave the browser running")
     args = ap.parse_args()
 
-    launcher = os.path.join(args.bundle, "tilion")
+    launcher = os.path.join(args.bundle, "tilion.cmd" if os.name == "nt" else "tilion")
     if not os.path.exists(launcher):
         sys.exit(f"no launcher at {launcher}")
 
+    # Isolated, OS-appropriate temp dirs (not a hardcoded /tmp, which doesn't exist on Windows).
+    profile = tempfile.mkdtemp(prefix="fortress-gauntlet-")
+    home = tempfile.mkdtemp(prefix="fortress-gauntlet-home-")
+    cmd = [launcher, "--headless=new", "--no-sandbox", "--disable-gpu",
+           f"--remote-debugging-port={args.port}",
+           f"--user-data-dir={profile}", "about:blank"]
+    if os.name == "nt":
+        cmd = ["cmd", "/c", *cmd]   # a .cmd launcher must run through the shell interpreter
     proc = subprocess.Popen(
-        [launcher, "--headless=new", "--no-sandbox", "--disable-gpu",
-         f"--remote-debugging-port={args.port}",
-         "--user-data-dir=/tmp/fortress-gauntlet", "about:blank"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        env={**os.environ, "HOME": "/tmp/fortress-gauntlet-home"})
+        cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        env={**os.environ, "HOME": home})
     try:
         for _ in range(60):
             try:
@@ -119,6 +124,12 @@ def main():
     finally:
         if not args.keep:
             proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except Exception:
+                proc.kill()
+            shutil.rmtree(profile, ignore_errors=True)
+            shutil.rmtree(home, ignore_errors=True)
 
 
 if __name__ == "__main__":

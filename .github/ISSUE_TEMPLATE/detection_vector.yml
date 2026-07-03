@@ -1,0 +1,50 @@
+name: Detection vector
+description: A page or script that tells Fortress apart from real Chrome
+title: "detection: "
+labels: ["detection"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A reproducible detector is the single most valuable thing you can send. Before filing,
+        please sanity-check it is a **fingerprint** issue and not an **IP** one: most "it got
+        blocked" reports are the datacenter IP being flagged before any page script runs. Re-run
+        through a residential/mobile proxy first — if it clears, the fingerprint was fine.
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: A URL, or a self-contained HTML/JS snippet, that separates Fortress from real Chrome.
+      placeholder: |
+        https://example-detector.test
+        — or —
+        <script>document.title = navigator.webdriver</script>
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed vs expected
+      description: What Fortress shows, and what stock Chrome shows (values or screenshots).
+    validations:
+      required: true
+  - type: input
+    id: launch
+    attributes:
+      label: How you launched Fortress
+      description: Docker tag, pip/npm version, or bundle + the exact flags.
+      placeholder: "docker run tilion/fortress:latest  /  pip tilion-fortress 151.0.7908.0.post2"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Host OS and egress
+      placeholder: "Ubuntu 24.04, residential proxy"
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm
+      options:
+        - label: I verified this reproduces on a non-datacenter IP (or IP is not the factor here).
+          required: true
