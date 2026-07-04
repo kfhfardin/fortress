@@ -121,6 +121,16 @@ await f.close();
 
 <div align="center">
 
+### The 12-second tour
+
+<img src="docs/assets/fortress-reel.gif" width="760" alt="Fortress in 12 seconds: passes CreepJS, Sannysoft, BrowserScan and rebrowser, scrapes real sites, and clears Akamai on aa.com, lowes.com, macys.com and kohls.com."/>
+
+<sub>One loop, all real captures: passes <b>CreepJS / Sannysoft / BrowserScan / rebrowser</b> → scrapes structured data over CDP → clears <b>Akamai</b> on aa.com · lowes · macys · kohls (same residential IP).</sub>
+
+</div>
+
+<div align="center">
+
 ### Real scraping, fully headless
 
 <sub>Unedited captures of the Fortress engine driven over CDP. No stealth plugins, no JS patches: the fingerprint is corrected in the binary. Reproduce any of these with <a href="examples/scrape_demos.py"><code>examples/scrape_demos.py</code></a>.</sub>
