@@ -14,7 +14,7 @@ from __future__ import annotations
 import hashlib, json, os, platform, shutil, subprocess, sys, tarfile, time, urllib.request, zipfile
 from pathlib import Path
 
-__version__ = "151.0.7908.0.post3"
+__version__ = "151.0.7908.0.post4"
 __all__ = ["Fortress", "resolve_platform"]
 
 _REPO = "tiliondev/fortress"
@@ -163,11 +163,17 @@ class Fortress:
 
     def _start_native(self, plat: str):
         launcher = _download(plat, self._host, self._tag)
-        args = [str(launcher)]
+        flags = []
         if self.headless:
-            args += ["--headless=new", "--no-sandbox"]
-        args += [f"--remote-debugging-port={self.port}", f"--user-data-dir={_CACHE / 'profile'}"]
-        args += _persona_args(self.persona) + self.extra_args
+            flags += ["--headless=new", "--no-sandbox"]
+        flags += [f"--remote-debugging-port={self.port}", f"--user-data-dir={_CACHE / 'profile'}"]
+        flags += _persona_args(self.persona) + self.extra_args
+        # A Windows .cmd launcher cannot be spawned directly by CreateProcess
+        # (WinError 193); run it through cmd.exe. POSIX launchers exec in place.
+        if str(launcher).lower().endswith(".cmd"):
+            args = ["cmd", "/c", str(launcher)] + flags
+        else:
+            args = [str(launcher)] + flags
         self._proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def _start_docker(self):
@@ -180,7 +186,7 @@ class Fortress:
                 "-p", f"{self.port}:9222", self._docker] + _persona_args(self.persona) + self.extra_args
         subprocess.run(args, check=True, stdout=subprocess.DEVNULL)
 
-    def _wait_cdp(self, timeout: float = 40.0) -> str:
+    def _wait_cdp(self, timeout: float = 90.0) -> str:
         deadline = time.time() + timeout
         url = f"http://127.0.0.1:{self.port}/json/version"
         while time.time() < deadline:
@@ -193,7 +199,14 @@ class Fortress:
 
     def close(self):
         if self._proc:
-            self._proc.terminate(); self._proc = None
+            # On Windows the launcher runs under cmd.exe; terminate() would only
+            # kill cmd and orphan chrome.exe, so kill the whole process tree.
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(self._proc.pid)],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                self._proc.terminate()
+            self._proc = None
         if self._docker_name:
             subprocess.run(["docker", "rm", "-f", self._docker_name],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

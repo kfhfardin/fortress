@@ -104,7 +104,7 @@ async function assetExists(plat, host) {
   catch { return false; }
 }
 
-async function waitCdp(port, timeoutMs = 40000) {
+async function waitCdp(port, timeoutMs = 90000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try { const r = await fetch(`http://127.0.0.1:${port}/json/version`); if (r.ok) return (await r.json()).webSocketDebuggerUrl; }
@@ -150,7 +150,14 @@ export class Fortress {
   }
 
   async close() {
-    if (this.proc) { this.proc.kill(); this.proc = null; }
+    if (this.proc) {
+      // On Windows the launcher runs under cmd.exe (shell:true); proc.kill() would
+      // only reap the shell and orphan chrome.exe, so kill the whole process tree.
+      if (process.platform === "win32" && this.proc.pid)
+        spawnSync("taskkill", ["/F", "/T", "/PID", String(this.proc.pid)], { stdio: "ignore" });
+      else this.proc.kill();
+      this.proc = null;
+    }
     if (this.dockerName) { spawnSync("docker", ["rm", "-f", this.dockerName], { stdio: "ignore" }); this.dockerName = null; }
   }
 }

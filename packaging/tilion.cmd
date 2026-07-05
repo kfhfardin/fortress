@@ -19,5 +19,5 @@ if not defined TILION_NO_DEFAULTS set DEF=^
  --uxr-webrtc-policy=disable_non_proxied_udp^
  --enable-unsafe-webgpu --enable-features=Vulkan --use-webgpu-adapter=swiftshader^
  --enable-dawn-features=use_vulkan --uxr-webgpu-vendor=nvidia --uxr-webgpu-architecture=ampere "--uxr-webgpu-description=NVIDIA GeForce RTX 3060"
-"%HERE%chrome.exe" %DEF% %*
+"%HERE%chrome.exe" --use-angle=swiftshader %DEF% %*
 endlocal
