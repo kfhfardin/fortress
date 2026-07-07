@@ -599,12 +599,21 @@ async def get_stealth_cdp_endpoint() -> dict:
 
 def main() -> None:
     """Console entry point (``tilion-mcp`` / ``python -m tilion.mcp``)."""
+    # Windows consoles default to cp1252, so any non-latin1 glyph in a log line raises
+    # UnicodeEncodeError and can kill the server. Force UTF-8 on the streams (JSON-RPC is
+    # UTF-8 anyway) so no banner/log character can ever crash it. The banner itself is
+    # kept ASCII as belt-and-suspenders.
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+        except Exception:
+            pass
     # Banner to STDERR only — stdout is the MCP stdio transport and must stay clean.
     print(
-        "Tilion · Fortress Stealth-Browser MCP  [Beta]\n"
-        "  26 tools · local & free · hosted cloud (residential egress) coming soon\n"
-        "  docs: DOCUMENTATION.md   more coming — benchmarks in the README\n"
-        "  listening on stdio…",
+        "Tilion Fortress Stealth-Browser MCP  [Beta]\n"
+        "  26 tools | local & free | hosted cloud (residential egress) coming soon\n"
+        "  docs: DOCUMENTATION.md - more coming; benchmarks in the README\n"
+        "  listening on stdio...",
         file=sys.stderr, flush=True,
     )
     mcp.run()
