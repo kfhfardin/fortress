@@ -1,6 +1,6 @@
 # Fortress MCP — a stealth browser for AI agents
 
-> **Beta** · 28 tools · runs **local & free** · **hosted cloud coming soon**
+> **Beta** · 29 tools · runs **local & free** · **hosted cloud coming soon**
 
 An [MCP](https://modelcontextprotocol.io) server that gives any AI agent the **Fortress
 stealth engine** the moment it gets blocked. When a fetch hits Cloudflare, DataDome,
@@ -85,7 +85,7 @@ server, then confirm with `get_egress_info`.
 
 If `tilion-mcp` isn't on PATH, use `"command": "python", "args": ["-m", "tilion.mcp"]`.
 
-## The 28 tools
+## The 29 tools
 
 | Tool | What the agent uses it for |
 |---|---|
@@ -98,6 +98,7 @@ If `tilion-mcp` isn't on PATH, use `"command": "python", "args": ["-m", "tilion.
 | `current_page` · `get_page_html` · `evaluate_js` · `wait_for` | inspect / script / wait on the working page |
 | `crawl_site` | crawl a whole site (auto-handles SPA/JS) → pages + sitemap |
 | `recon_site_apis` | reverse-engineer a site's private XHR/JSON API (secret-scrubbed) |
+| `detect_waf` | identify the anti-bot vendor (Cloudflare/DataDome/PerimeterX/Akamai/Kasada) + strategy |
 | `run_browser_task` · `list_browser_tasks` | 20 multi-step flows: login, paginate, infinite-scroll, checkout… |
 | `search_web` | web search through the stealth browser (no SERP API) |
 | `screenshot_page` · `save_page` · `download_file` | capture PNG / export pdf·html·text / download a file |

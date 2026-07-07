@@ -590,6 +590,24 @@ async def close_tab(index: int) -> dict:
     return await t.close_tab(int(index))
 
 
+@mcp.tool(annotations=_READ)
+@_safe
+async def detect_waf(url: str | None = None) -> dict:
+    """Identify the anti-bot / WAF vendor protecting a page (Cloudflare, DataDome,
+    PerimeterX, Akamai, Kasada, Incapsula) on the current page or a freshly-navigated `url`.
+
+    Returns {vendor, challenged, confidence, strategy, signals}. Use it to decide the
+    approach before hitting a hard target: `ip_and_wait`/Akamai and `behavior_*`/DataDome+
+    PerimeterX want residential egress + human interaction; `wait_challenge`/Cloudflare and
+    `pow_wait`/Kasada auto-clear or need time. `fetch_protected_page` already applies the
+    right strategy automatically and returns the same `waf` info.
+    """
+    if url:
+        await _check_url(url)
+    t = await _t()
+    return await t.detect_waf(url)
+
+
 @mcp.tool(annotations=_WRITE)
 @_safe
 async def solve_captcha(url: str | None = None) -> dict:
@@ -659,7 +677,7 @@ def main() -> None:
     # Banner to STDERR only — stdout is the MCP stdio transport and must stay clean.
     print(
         "Tilion Fortress Stealth-Browser MCP  [Beta]\n"
-        "  28 tools | local & free | hosted cloud (residential egress) coming soon\n"
+        "  29 tools | local & free | hosted cloud (residential egress) coming soon\n"
         "  docs: DOCUMENTATION.md - more coming; benchmarks in the README\n"
         "  listening on stdio...",
         file=sys.stderr, flush=True,
