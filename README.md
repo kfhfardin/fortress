@@ -9,7 +9,8 @@ Stealth Chromium engine
 
 [![Chromium](https://img.shields.io/badge/chromium-151.0.7908.0-4285F4?logo=googlechrome&logoColor=white)](CHROMIUM_VERSION) [![pip](https://img.shields.io/badge/pip-3776AB?logo=pypi&logoColor=white)](https://pypi.org/project/tilion-fortress/) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/tilion-fortress) [![Docker pulls](https://img.shields.io/docker/pulls/tilion/fortress?logo=docker&logoColor=white&label=pulls)](https://hub.docker.com/r/tilion/fortress)<br/>
 [![CreepJS](https://img.shields.io/badge/CreepJS-0%25%20headless-2ea44f)](docs/GAUNTLET_RESULTS.md) [![Runtime.enable leak](https://img.shields.io/badge/Runtime.enable-no%20leak-2ea44f)](docs/GAUNTLET_RESULTS.md)<br/>
-[![Copy for agent](https://img.shields.io/badge/Copy%20for%20agent-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/AGENTS.md) [![llms.txt](https://img.shields.io/badge/llms.txt-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/llms.txt)
+[![Copy for agent](https://img.shields.io/badge/Copy%20for%20agent-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/AGENTS.md) [![llms.txt](https://img.shields.io/badge/llms.txt-24292f?logo=readme&logoColor=white)](https://raw.githubusercontent.com/tiliondev/fortress/main/llms.txt)<br/>
+[![MCP server](https://img.shields.io/badge/MCP-fortress%20·%2026%20tools-6E56CF?logo=modelcontextprotocol&logoColor=white)](mcp/) [![npm tilion-mcp](https://img.shields.io/npm/v/tilion-mcp?logo=npm&logoColor=white&label=npx%20tilion-mcp&color=CB3837)](https://www.npmjs.com/package/tilion-mcp)
 
 **Fortress is a stealth Chromium engine that stops your scrapers and browser agents from getting blocked, with one line of code change.** Bot detectors flag automation by reading the browser fingerprint; Fortress corrects that fingerprint inside Chromium's C++, so the browser presents as an ordinary Chrome install. Scrapers finish their runs, agents reach the pages they were sent to, and CreepJS, Sannysoft, BrowserScan, and live Cloudflare Turnstile all read it as human. Point your existing Playwright or Puppeteer at Fortress over CDP, and nothing else in your code changes.
 
@@ -272,26 +273,58 @@ Full guide: https://github.com/tiliondev/fortress/blob/main/AGENTS.md
 
 ## The Fortress MCP — stealth browsing as agent tools &nbsp;<sub>Beta</sub>
 
-Beyond raw CDP, Fortress ships a **[Model Context Protocol](https://modelcontextprotocol.io) server** so an AI agent can reach for the stealth browser the moment a fetch gets blocked — no code, just tools. **26 tools**, local and free: `fetch_protected_page`, `extract_page`, `crawl_site`, `recon_site_apis`, `search_web`, `run_browser_task`, `save_profile`, `get_stealth_cdp_endpoint`, and more.
+Raw CDP is for code you write. The **Fortress MCP** is for agents that call **tools**: a [Model Context Protocol](https://modelcontextprotocol.io) server that hands Claude, Cursor, or any MCP client a stealth browser, so the moment a fetch is blocked it just calls a tool and gets the page. **26 tools, local and free** — `fetch_protected_page`, `extract_page`, `crawl_site`, `recon_site_apis`, `search_web`, `run_browser_task`, `save_profile`, `get_stealth_cdp_endpoint`, and more.
 
 <p align="center"><img src="mcp/demo.gif" alt="Same site, same prompt: a vanilla browser is blocked by PerimeterX while an agent with the Fortress MCP returns clean JSON" width="760"/></p>
 
-<sub><i>Real, dated run against <b>stockx.com</b> (PerimeterX). A stock browser gets <b>HTTP 403 — “Access denied”</b>; an agent with the Fortress MCP returns clean JSON — same site, same prompt.</i></sub>
+<sub><i>Real, dated run against <b>stockx.com</b> (PerimeterX). A stock browser gets <b>HTTP 403 — “Access denied”</b>; an agent with the Fortress MCP returns clean JSON — same site, same prompt. Reproduce it from the framework repo.</i></sub>
+
+### Set it up in 30 seconds
+
+Two runners — pick one. `npx` needs Python on PATH; `pip` installs it directly:
 
 ```bash
-pip install "tilion[mcp]"
-tilion-mcp                        # stdio MCP server
+pip install "tilion[mcp]"      # command:  tilion-mcp
+#   —or, zero-install—
+npx -y tilion-mcp              # auto-runs the server via uv (no global install)
 ```
 
-**Claude Desktop / Cursor / Cline / Windsurf** — add to the MCP config:
+**Claude Desktop** — Settings → Developer → *Edit Config* (`claude_desktop_config.json`):
+
+```json
+{ "mcpServers": { "fortress": { "command": "tilion-mcp" } } }
+```
+<sub>Prefer npx? Use <code>"command": "npx", "args": ["-y", "tilion-mcp"]</code>. Restart Claude, and the <b>fortress</b> tools appear.</sub>
+
+**Claude Code** (CLI) — one line:
+
+```bash
+claude mcp add fortress -- tilion-mcp          # or:  claude mcp add fortress -- npx -y tilion-mcp
+```
+
+**Cursor** (`~/.cursor/mcp.json`) · **Cline / Windsurf** (VS Code → MCP servers) — same block:
 
 ```json
 { "mcpServers": { "fortress": { "command": "tilion-mcp" } } }
 ```
 
-The server is pre-warmed on startup (~100 ms first call), concurrency-safe, and timeout- and SSRF-guarded. A hosted/remote endpoint with residential egress is **coming soon**.
+Then just ask your agent — *“get the price off this StockX page”* — and it calls `fetch_protected_page` on its own.
 
-→ Full tool table, benchmarks, and the agent skill: **[`mcp/`](mcp/README.md)**
+### What the agent gets
+
+| | tools |
+|---|---|
+| **Get blocked pages** | `fetch_protected_page` · `read_page` · `get_page_html` · `search_web` |
+| **Structured data** | `extract_page` (schema-aware) · `extract_document` (PDF/DOCX/XLSX) |
+| **Whole sites** | `crawl_site` (auto-SPA) · `recon_site_apis` (find the private JSON API) |
+| **Drive a page** | `page_elements` · `click_button` · `fill_field` · `press_key` · `wait_for` · `evaluate_js` |
+| **Multi-step flows** | `run_browser_task` (login, paginate, infinite-scroll, checkout, …) |
+| **Capture / auth** | `screenshot_page` · `save_page` · `download_file` · `save_profile` / `load_profile` |
+| **Bring your own** | `get_stealth_cdp_endpoint` → a CDP url for Playwright / Puppeteer / browser-use |
+
+Tools are annotated (reads auto-approve, writes gate), **pre-warmed** on startup (~100 ms first call), concurrency-safe, and timeout- and SSRF-guarded. A hosted endpoint with **residential egress is coming soon**.
+
+→ Full 26-tool table, benchmarks, and the agent skill: **[`mcp/`](mcp/README.md)**
 
 ---
 
