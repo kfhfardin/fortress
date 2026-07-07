@@ -1,6 +1,8 @@
 # Fortress MCP — a stealth browser for AI agents
 
 > **Beta** · 29 tools · runs **local & free** · **hosted cloud coming soon**
+>
+> 📖 **[Full usage guide → mcp/USAGE.md](USAGE.md)** — every tool, the block-handling decision model, workflow recipes, and config.
 
 An [MCP](https://modelcontextprotocol.io) server that gives any AI agent the **Fortress
 stealth engine** the moment it gets blocked. When a fetch hits Cloudflare, DataDome,
@@ -86,6 +88,8 @@ server, then confirm with `get_egress_info`.
 If `tilion-mcp` isn't on PATH, use `"command": "python", "args": ["-m", "tilion.mcp"]`.
 
 ## The 29 tools
+
+*Full per-tool detail + workflows in [USAGE.md](USAGE.md).*
 
 | Tool | What the agent uses it for |
 |---|---|

@@ -28,7 +28,7 @@ pip install "tilion[mcp]"
 Add to the client MCP config: `{ "mcpServers": { "fortress": { "command": "tilion-mcp" } } }`
 
 ## Tool cheat-sheet (pick by intent)
-- **Blocked / need the page** → `fetch_protected_page(url)` → `{status, title, text, blocked}`.
+- **Blocked / need the page** → `fetch_protected_page(url)` → `{status, http_status, blocked, waf, title, text}`.
 - **Clean content** → `read_page(url)` (markdown) or `extract_page(url, schema?)` (record).
 - **A file (PDF/DOCX/XLSX/CSV)** → `extract_document(source)`.
 - **Whole site** → `crawl_site(url, depth, max_pages)`.
@@ -38,10 +38,27 @@ Add to the client MCP config: `{ "mcpServers": { "fortress": { "command": "tilio
   / `evaluate_js`; check with `current_page`.
 - **Multi-step flow** (login, paginate, infinite-scroll, checkout) →
   `list_browser_tasks()` then `run_browser_task(task, url, params?)`.
+- **Identify the anti-bot** → `detect_waf(url)` → `{vendor, challenged, strategy}`.
+- **Solve a captcha** → `solve_captcha(url)` (needs `CAPTCHA_API_KEY`).
+- **Check egress** → `get_egress_info()` → the real public IP the target sees.
 - **Auth reuse** → `save_profile(name)` / `load_profile(name)`.
 - **Capture** → `screenshot_page` / `save_page(format=pdf|html|text|png)` / `download_file`.
 - **Bring your own automation** → `get_stealth_cdp_endpoint()` → a CDP url for
   Playwright / Puppeteer / browser-use / Crawl4AI.
+
+## Handling a block (the golden path)
+`fetch_protected_page` returns a `waf` field — **read it, don't guess**:
+- `status:"ok"` → you have the page; extract/read/act.
+- `status:"empty"` → JS withheld content; retry or use `run_browser_task` to interact.
+- `status:"blocked"` → check `waf.vendor`: **cloudflare/incapsula** usually auto-clears (retry
+  once); **datadome/perimeterx** are behavioral (fetch already nudged — if still blocked you
+  need residential egress); **akamai/kasada** are IP-gated → set `TILION_PROXY` and retry; a
+  **captcha** present → `solve_captcha` (or fetch auto-solves with `CAPTCHA_API_KEY`).
+
+## Configure the hard-target levers (env)
+- `TILION_PROXY=http://user:pass@host:port` — residential/mobile egress (the #1 unblock lever;
+  verify with `get_egress_info`). `TILION_REGION=us` aligns timezone/locale to the IP.
+- `CAPTCHA_API_KEY=...` (+ `CAPTCHA_PROVIDER=2captcha|anticaptcha|capsolver`) — auto-solve.
 
 ## Good habits
 - Prefer `extract_page`/`read_page` over dumping raw HTML — outputs are capped and clean.
@@ -53,4 +70,6 @@ Add to the client MCP config: `{ "mcpServers": { "fortress": { "command": "tilio
   residential IP the local engine clears most walls. Hosted residential egress is coming soon.
 
 ## Reference
-Full docs and the 26-tool table live in the repo's [`mcp/README.md`](../README.md).
+- **[`mcp/USAGE.md`](../USAGE.md)** — the full 29-tool guide: per-tool detail, workflow
+  recipes, result-reading, and config.
+- **[`mcp/README.md`](../README.md)** — install, tool table, benchmarks.
