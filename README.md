@@ -93,6 +93,7 @@ pip install -U tilion-fortress       # or:  docker run --rm -p 9222:9222 tilion/
 | | |
 |---|---|
 | **[What it is](#what-it-is)** · **[Quick start](#quick-start)** | what it is, install, first script, AI-agent setup |
+| **[The Fortress MCP](#the-fortress-mcp--stealth-browsing-as-agent-tools)** | 26 stealth-browser tools for AI agents (Beta) |
 | **[Why patch the engine, not the page](#why-patch-the-engine-not-the-page)** | the self-revealing-JS thesis + the three detection layers |
 | **[How Fortress compares](#how-fortress-compares)** | vs puppeteer-stealth · Camoufox · CloakBrowser · closed vendors |
 | **[Proof: live-detector results](#proof-live-detector-results)** | CreepJS / Sannysoft / BrowserScan / Cloudflare, with screenshots |
@@ -266,6 +267,31 @@ RULES:
 Now walk me through launching Fortress and wiring my automation to it.
 Full guide: https://github.com/tiliondev/fortress/blob/main/AGENTS.md
 ```
+
+---
+
+## The Fortress MCP — stealth browsing as agent tools &nbsp;<sub>Beta</sub>
+
+Beyond raw CDP, Fortress ships a **[Model Context Protocol](https://modelcontextprotocol.io) server** so an AI agent can reach for the stealth browser the moment a fetch gets blocked — no code, just tools. **26 tools**, local and free: `fetch_protected_page`, `extract_page`, `crawl_site`, `recon_site_apis`, `search_web`, `run_browser_task`, `save_profile`, `get_stealth_cdp_endpoint`, and more.
+
+<p align="center"><img src="mcp/demo.gif" alt="Same site, same prompt: a vanilla browser is blocked by PerimeterX while an agent with the Fortress MCP returns clean JSON" width="760"/></p>
+
+<sub><i>Real, dated run against <b>stockx.com</b> (PerimeterX). A stock browser gets <b>HTTP 403 — “Access denied”</b>; an agent with the Fortress MCP returns clean JSON — same site, same prompt.</i></sub>
+
+```bash
+pip install "tilion[mcp]"
+tilion-mcp                        # stdio MCP server
+```
+
+**Claude Desktop / Cursor / Cline / Windsurf** — add to the MCP config:
+
+```json
+{ "mcpServers": { "fortress": { "command": "tilion-mcp" } } }
+```
+
+The server is pre-warmed on startup (~100 ms first call), concurrency-safe, and timeout- and SSRF-guarded. A hosted/remote endpoint with residential egress is **coming soon**.
+
+→ Full tool table, benchmarks, and the agent skill: **[`mcp/`](mcp/README.md)**
 
 ---
 
