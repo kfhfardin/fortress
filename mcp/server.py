@@ -200,7 +200,17 @@ async def _t() -> Tilion:
             base_url = _env("BASE_URL")
             api_key = _env("API_KEY")
             headless = (_env("MCP_HEADLESS", "1") != "0")
-            inst = Tilion(headless=headless, base_url=base_url, api_key=api_key)
+            # Egress + captcha come from env so an agent host can configure a residential
+            # proxy and a captcha key without changing the tool surface. TILION_PROXY /
+            # TILION_REGION / CAPTCHA_API_KEY are read by the facade itself; pass any
+            # explicit ones through here too.
+            inst = Tilion(
+                headless=headless, base_url=base_url, api_key=api_key,
+                proxy=_env("PROXY"),                 # TILION_PROXY
+                region=_env("REGION"),               # TILION_REGION
+                captcha_api_key=os.environ.get("CAPTCHA_API_KEY"),
+                captcha_provider=os.environ.get("CAPTCHA_PROVIDER", "2captcha"),
+            )
             await inst.start()
             _tilion = inst
     return _tilion
@@ -580,6 +590,44 @@ async def close_tab(index: int) -> dict:
     return await t.close_tab(int(index))
 
 
+@mcp.tool(annotations=_WRITE)
+@_safe
+async def solve_captcha(url: str | None = None) -> dict:
+    """Detect and solve a CAPTCHA on the current page (or a freshly-navigated `url`).
+
+    Use when a page is gated by reCAPTCHA/hCaptcha/Turnstile. Requires a solver key in the
+    server env (`CAPTCHA_API_KEY`, provider `CAPTCHA_PROVIDER` = 2captcha|anticaptcha|
+    capsolver). Returns {detected, kind, solvable, solved}. `fetch_protected_page` already
+    auto-solves when a key is set; use this for an explicit retry on an interactive page.
+    """
+    if url:
+        await _check_url(url)
+    t = await _t()
+    return await t.solve_captcha(url)
+
+
+@mcp.tool(annotations=_READ)
+@_safe
+async def get_egress_info() -> dict:
+    """Report the current egress config: whether a proxy/region is set and the public IP
+    the target actually sees. Use to confirm residential egress is active before hitting a
+    hard target (a datacenter IP gets pre-classified as a bot regardless of fingerprint).
+    Configure via env: TILION_PROXY=http://user:pass@host:port, TILION_REGION=us.
+    """
+    t = await _t()
+    info = {"proxy_configured": t._proxy is not None,
+            "proxy_type": getattr(t._proxy, "type", None),
+            "region": t._region,
+            "captcha_solver": bool(t._captcha_api_key)}
+    try:
+        r = await t.fetch("https://api.ipify.org?format=json", timeout_ms=20000)
+        import json as _json
+        info["public_ip"] = _json.loads(r.get("text", "{}") or "{}").get("ip")
+    except Exception:
+        info["public_ip"] = None
+    return info
+
+
 @mcp.tool(annotations=_READ)
 @_safe
 async def get_stealth_cdp_endpoint() -> dict:
@@ -611,7 +659,7 @@ def main() -> None:
     # Banner to STDERR only — stdout is the MCP stdio transport and must stay clean.
     print(
         "Tilion Fortress Stealth-Browser MCP  [Beta]\n"
-        "  26 tools | local & free | hosted cloud (residential egress) coming soon\n"
+        "  28 tools | local & free | hosted cloud (residential egress) coming soon\n"
         "  docs: DOCUMENTATION.md - more coming; benchmarks in the README\n"
         "  listening on stdio...",
         file=sys.stderr, flush=True,

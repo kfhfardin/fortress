@@ -1,6 +1,6 @@
 # Fortress MCP — a stealth browser for AI agents
 
-> **Beta** · 26 tools · runs **local & free** · **hosted cloud coming soon**
+> **Beta** · 28 tools · runs **local & free** · **hosted cloud coming soon**
 
 An [MCP](https://modelcontextprotocol.io) server that gives any AI agent the **Fortress
 stealth engine** the moment it gets blocked. When a fetch hits Cloudflare, DataDome,
@@ -36,7 +36,7 @@ Fortress engine. The stealth Chromium downloads on first run and is cached local
 
 If `tilion-mcp` isn't on PATH, use `"command": "python", "args": ["-m", "tilion.mcp"]`.
 
-## The 26 tools
+## The 28 tools
 
 | Tool | What the agent uses it for |
 |---|---|
@@ -55,6 +55,8 @@ If `tilion-mcp` isn't on PATH, use `"command": "python", "args": ["-m", "tilion.
 | `get_cookies` · `save_profile` · `load_profile` | read cookies · persist/restore an authenticated session |
 | `list_tabs` · `close_tab` | manage open tabs |
 | `get_stealth_cdp_endpoint` | a CDP url to point your OWN browser-use / Playwright / Puppeteer at |
+| `solve_captcha` | detect + solve a reCAPTCHA/hCaptcha/Turnstile (needs `CAPTCHA_API_KEY`) |
+| `get_egress_info` | report proxy/region + the real public IP the target sees (verify residential egress) |
 
 Tools are **annotated** (`readOnlyHint` / `destructiveHint`) so clients auto-approve reads
 and gate writes. Every tool is **timeout- and SSRF-guarded**, caps its output, and returns a
@@ -84,6 +86,10 @@ Fingerprint suites: **Sannysoft all-green · CreepJS 0% headless · BrowserScan 
 | `TILION_ALLOW_PRIVATE_EGRESS` | `0` | `1` to allow localhost / private IPs (SSRF guard off) |
 | `TILION_MCP_TOOL_TIMEOUT` | `120` | per-tool wall-clock cap (seconds) |
 | `TILION_BASE_URL` / `TILION_API_KEY` | — | hosted mode (**coming soon**) |
+| `TILION_PROXY` | — | egress proxy `http://user:pass@host:port` (residential/mobile) |
+| `TILION_REGION` | — | egress region hint (e.g. `us`) — aligns timezone/locale to the IP |
+| `CAPTCHA_API_KEY` | — | solver key; `fetch` then auto-solves + `solve_captcha` works |
+| `CAPTCHA_PROVIDER` | `2captcha` | `2captcha` \| `anticaptcha` \| `capsolver` |
 
 ## How it works
 
