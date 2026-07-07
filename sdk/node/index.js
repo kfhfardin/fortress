@@ -15,8 +15,8 @@ const REPO = "tiliondev/fortress";
 // the mass of real users run). "latest" = 151 (newest engine). Override with { channel } or the
 // FORTRESS_CHANNEL env var.
 export const CHANNELS = {
-  stable: { tag: "v149.0.7827.232", docker: "tilion/fortress:149" },
-  latest: { tag: "v151.0.7908.0",   docker: "tilion/fortress:151" },
+  stable: { tag: "v149.0.7827.232", docker: "tilion/fortress:149.0.7827.232" },
+  latest: { tag: "v151.0.7908.0",   docker: "tilion/fortress:151.0.7908.0" },
 };
 const DEFAULT_CHANNEL = process.env.FORTRESS_CHANNEL || "latest";
 const CACHE = process.env.FORTRESS_BROWSERS_PATH || join(homedir(), ".cache", "tilion-fortress");

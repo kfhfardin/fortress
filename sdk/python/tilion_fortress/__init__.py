@@ -23,8 +23,8 @@ _REPO = "tiliondev/fortress"
 # version the mass of real users run, so it blends in best). "latest" = 151 (newest engine).
 # Override per-instance with channel=..., or globally with the FORTRESS_CHANNEL env var.
 _CHANNELS = {
-    "stable": {"tag": "v149.0.7827.232", "docker": "tilion/fortress:149"},
-    "latest": {"tag": "v151.0.7908.0",   "docker": "tilion/fortress:151"},
+    "stable": {"tag": "v149.0.7827.232", "docker": "tilion/fortress:149.0.7827.232"},
+    "latest": {"tag": "v151.0.7908.0",   "docker": "tilion/fortress:151.0.7908.0"},
 }
 _DEFAULT_CHANNEL = os.environ.get("FORTRESS_CHANNEL", "stable")
 _CACHE = Path(os.environ.get("FORTRESS_BROWSERS_PATH",
