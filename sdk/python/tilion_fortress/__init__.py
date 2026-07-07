@@ -3,8 +3,9 @@ tilion-fortress — install and drive the Fortress stealth Chromium engine.
 
 Ships the prebuilt binary only (no engine source). Detects the platform, downloads the
 matching bundle from the official GitHub Release, verifies it against SHA256SUMS, caches
-it, and launches it with a CDP endpoint. macOS/Windows fall back to the Docker image until
-native binaries are published for that platform.
+it, and launches it with a CDP endpoint. **Linux x64 and Windows x64 have native binaries**
+(downloaded automatically — no Docker needed). macOS has no native bundle yet and uses the
+Docker image; Docker is also the fallback anywhere a native launch isn't available.
 
     from tilion_fortress import Fortress
     with Fortress() as f:
