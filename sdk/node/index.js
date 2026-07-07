@@ -18,7 +18,7 @@ export const CHANNELS = {
   stable: { tag: "v149.0.7827.232", docker: "tilion/fortress:149.0.7827.232" },
   latest: { tag: "v151.0.7908.0",   docker: "tilion/fortress:151.0.7908.0" },
 };
-const DEFAULT_CHANNEL = process.env.FORTRESS_CHANNEL || "latest";
+const DEFAULT_CHANNEL = process.env.FORTRESS_CHANNEL || "stable";
 const CACHE = process.env.FORTRESS_BROWSERS_PATH || join(homedir(), ".cache", "tilion-fortress");
 const hostFor = (tag) => process.env.FORTRESS_DOWNLOAD_HOST || `https://github.com/${REPO}/releases/download/${tag}`;
 
