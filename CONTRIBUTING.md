@@ -1,26 +1,20 @@
 # Contributing to Fortress
 
-Fortress is built and maintained by its **core team**. To protect the stealth
-engine's invariants and keep the supply chain trustworthy, contributions are
-accepted **only from authorized core-team members**.
+Fortress is open source and open to contributions. Bug fixes, new features, performance work, docs, and tests are all welcome.
 
-## Policy
+## How to contribute
 
-- **Unsolicited external pull requests are not accepted and will be closed.**
-  This explicitly includes branding / attribution / "brand refresh" PRs,
-  dependency-bump PRs, and CI / GitHub Actions workflow PRs from non-team accounts.
-- **No third-party attribution, badges, or brand strings** may be added to this
-  repository. Fortress is not affiliated with, and is not "built" or "maintained
-  by," any outside party.
-- **CI / GitHub Actions from forks is never approved to run**, and workflow files
-  are only added by the core team.
-- **Core-team members** coordinate with the maintainer before opening a PR. Any
-  test change needing elevated permissions (CI secrets, publishing, infra) must be
-  authorized in advance.
-- Changes to `patches/`, the SDK, packaging, and `.github/workflows/` require
-  maintainer review — see [.github/CODEOWNERS](.github/CODEOWNERS).
+1. For anything bigger than a small fix, open an issue first so we can agree on the approach before you write code.
+2. Fork the repo and branch from `main`.
+3. Keep the patch focused. One change per PR.
+4. Open a PR describing what changed and why. A maintainer will review it.
+
+Changes to `patches/`, the SDK, packaging, and `.github/workflows/` require maintainer review, see [.github/CODEOWNERS](.github/CODEOWNERS). CI on PRs from forks runs after a maintainer approves the workflow run.
+
+## Branding is off limits
+
+The one hard restriction: no PR may add or change branding. This means no third-party attribution, badges, brand strings, logos, or "built with" credits anywhere in the repo. Fortress is not affiliated with any outside party, and PRs implying otherwise will be closed without review. If your change is code, it's welcome; if it touches naming or attribution, it isn't.
 
 ## Bug reports
 
-Anyone may open an **issue** for a genuine bug or question. Code, however, lands
-only through the core team.
+Open an issue for bugs, questions, or feature requests. Reproduction steps help.
