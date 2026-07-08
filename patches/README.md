@@ -1,24 +1,29 @@
-# Patches — the open surface layer
+# Patches — a partial surface layer (demo)
 
-These are Fortress's **surface-coherence patches**: the in-tree Chromium/Blink modifications that read a
-per-launch persona and present it consistently across the JS-observable fingerprint surfaces (user-agent,
-platform, WebGL, timezone, languages, screen, keyboard, media, and so on), including inside worker and
-iframe realms.
+These are **some** of Fortress's surface-coherence patches: in-tree Chromium/Blink
+modifications that read a per-launch persona and present it consistently across the
+JS-observable fingerprint surfaces (user-agent, platform, WebGL, timezone, languages,
+screen, keyboard, media, and so on), including inside worker and iframe realms.
 
-> **These patches are a reference layer — not the whole engine, and not the current build.**
+> **This is a representative subset — not the full set, not the newest work, and not
+> the current build.**
 >
-> The part that *mints* a coherent, per-launch real-device persona and *delivers* it into the process —
-> the device-model corpus, the joint-distribution generator, and the process-level delivery seam — ships
-> **compiled inside the released binary** and is intentionally **not** in this repository. Building from
-> these patches alone will *not* reproduce the shipped stealth (you'll get surfaces that read a persona
-> that nothing is providing); it demonstrates the technique, not the product.
+> What's here is an earlier demonstration slice. The bulk of the current stealth — the
+> newer ("v2") surface-coherence patches, plus the part that *mints* a coherent
+> per-launch real-device persona and *delivers* it into the process (the device-model
+> corpus, the joint-distribution generator, and the process-level delivery seam) —
+> ships **compiled inside the released binary** and is intentionally **not** published
+> here.
+>
+> Building from these patches alone will **not** reproduce the shipped stealth (you'll
+> get surfaces reading a persona that nothing provides). It demonstrates the technique,
+> not the product.
 
 For the real, current engine:
 
-```bash
-pip install -U tilion-fortress
-# or
-docker run --rm -p 9222:9222 tilion/fortress:latest
-```
+    pip install -U tilion-fortress
+    # or
+    docker run --rm -p 9222:9222 tilion/fortress:latest
 
-See the [latest release](https://github.com/tiliondev/fortress/releases/latest) for what actually ships.
+See the [latest release](https://github.com/tiliondev/fortress/releases/latest) for
+what actually ships.
