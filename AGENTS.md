@@ -792,14 +792,15 @@ curl --fail --location "$fortress_base/SHA256SUMS" -o "$fortress_download/SHA256
 fortress_install="$HOME/.tilion/installs/v153.0.8010.36"
 mkdir -p "$fortress_install"
 tar -xzf "$fortress_download/$fortress_asset" -C "$fortress_install"
-fortress_launcher="$(find "$fortress_install" -type f -name tilion -print -quit)"
-test -n "$fortress_launcher"
+fortress_launcher="$fortress_install/fortress-v153/tilion"
 test -x "$fortress_launcher"
 printf 'Engine launcher: %s\n' "$fortress_launcher"
 ```
 
 Verify existing installations before reuse; do not overwrite a running engine.
 Retain the archive/checksum and record the launcher. Keep the app bundle together.
+The macOS `tilion` launcher is a symlink; `find -type f -name tilion` skips it.
+Test the exact verified bundle path with `test -x`, which follows that link.
 The release is ad-hoc signed. If macOS blocks a verified download, inspect
 quarantine attributes with `xattr -lr "$fortress_install"` and use the normal
 macOS approval flow. If quarantine is the identified blocker, the release

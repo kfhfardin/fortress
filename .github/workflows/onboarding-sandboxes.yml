@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: fortress-onboarding-${{ github.ref }}
-  cancel-in-progress: true
+  group: fortress-onboarding-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   independent-install:
@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025, macos-15]
+        os: ${{ fromJSON(contains(github.event.head_commit.message, '[macos-only]') && '["macos-15"]' || '["ubuntu-24.04","ubuntu-24.04-arm","windows-2025","macos-15"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     defaults:
