@@ -1,0 +1,65 @@
+name: Independent Fortress onboarding sandboxes
+
+on:
+  push:
+    branches: [codex/fortress-os-sandboxes]
+    paths: [AGENTS.md, .github/workflows/onboarding-sandboxes.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fortress-onboarding-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  independent-install:
+    name: ${{ matrix.os }} fresh activation
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Supply only AGENTS.md and extract its documented replay
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path instructions | Out-Null
+          Set-Location instructions
+          $source = "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/AGENTS.md"
+          Invoke-WebRequest -Uri $source -OutFile AGENTS.md
+          if (@(Get-ChildItem -File).Count -ne 1) { throw 'Expected only AGENTS.md' }
+          $python = if ($IsWindows) { (Get-Command python).Source } else { (Get-Command python3).Source }
+          "FORTRESS_TEST_PYTHON=$python" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          & $python -c 'import platform,sys; assert sys.version_info >= (3,10); print(platform.platform(), platform.machine())'
+          & $python -c 'import pathlib,re; p=pathlib.Path("AGENTS.md"); s=p.read_text(encoding="utf-8"); m=re.search(r"<!-- recipe: sandbox-replay -->\n```python\n(.*?)^```",s,re.M|re.S); assert m; pathlib.Path("replay.py").write_text(m[1],encoding="utf-8")'
+          if ($LASTEXITCODE -ne 0) { throw 'Replay extraction failed' }
+      - name: Install independently and request this sandbox's key
+        working-directory: instructions
+        run: |
+          & $env:FORTRESS_TEST_PYTHON replay.py prepare
+          if ($LASTEXITCODE -ne 0) { throw 'Installation failed' }
+      - name: Return this sandbox's public approval link
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: approval-${{ matrix.os }}
+          path: instructions/activation-public.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Await real approval and verify engine plus Playwright
+        working-directory: instructions
+        run: |
+          & $env:FORTRESS_TEST_PYTHON replay.py finish
+          if ($LASTEXITCODE -ne 0) { throw 'Activation or verification failed' }
+      - name: Return non-secret timing report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: result-${{ matrix.os }}
+          path: instructions/report.json
+          if-no-files-found: error
+          retention-days: 7
