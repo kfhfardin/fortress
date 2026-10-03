@@ -608,6 +608,33 @@ Windows x64. Use PowerShell and Python 3.10+ for activation. Windows ARM64 has n
 native artifact in this release; use a supported remote host instead of assuming
 x64 emulation works.
 
+### Bootstrap Python on a clean Windows OS
+
+The base OS need only provide Windows PowerShell and its normal system tools.
+If Python is absent, run this block before the CLI recipe. Its download and
+installation count toward setup time and may overlap the engine download.
+The pinned installer/hash come from the official Python 3.13.16 release.
+
+<!-- recipe: windows-bootstrap -->
+```powershell
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$fortressRoot = Join-Path $env:USERPROFILE '.tilion'
+$fortressRuntime = Join-Path $fortressRoot 'runtime'
+$fortressBootstrapPython = Join-Path $fortressRuntime 'python.exe'
+if (Test-Path -LiteralPath $fortressBootstrapPython) { throw 'Expected a fresh Python runtime directory' }
+$fortressPythonInstaller = Join-Path $env:TEMP ('fortress-python-' + [guid]::NewGuid().ToString('N') + '.exe')
+Invoke-WebRequest -UseBasicParsing -Uri 'https://www.python.org/ftp/python/3.13.16/python-3.13.16-amd64.exe' -OutFile $fortressPythonInstaller
+$fortressPythonHash = 'fb4f9f5d438b2396da0086dc70b935c530cb578e37adc6d354f7ad2037fee83b'
+if ((Get-FileHash -LiteralPath $fortressPythonInstaller -Algorithm SHA256).Hash -ne $fortressPythonHash) { throw 'Python installer checksum mismatch' }
+$fortressPythonArgs = '/quiet InstallAllUsers=0 TargetDir="{0}" Include_pip=1 Include_launcher=0 Include_test=0 Include_doc=0 Include_tcltk=0 Include_dev=0 AssociateFiles=0 Shortcuts=0 PrependPath=0' -f $fortressRuntime
+$fortressPythonInstall = Start-Process -FilePath $fortressPythonInstaller -ArgumentList $fortressPythonArgs -WindowStyle Hidden -Wait -PassThru
+if ($fortressPythonInstall.ExitCode -ne 0) { throw "Python installation failed: $($fortressPythonInstall.ExitCode)" }
+& $fortressBootstrapPython -c 'import sys; assert sys.version_info[:3] == (3,13,16)'
+if ($LASTEXITCODE -ne 0) { throw 'Installed Python did not run' }
+```
+
 ### Install activation CLI and user PATH
 
 Inspect/reuse an existing dedicated environment first. `py -3` must select a
@@ -619,7 +646,12 @@ $ErrorActionPreference = 'Stop'
 $fortressRoot = Join-Path $env:USERPROFILE '.tilion'
 $fortressVenv = Join-Path $fortressRoot 'cli'
 New-Item -ItemType Directory -Force -Path $fortressRoot | Out-Null
-py -3 -m venv $fortressVenv
+$fortressBasePython = Join-Path $fortressRoot 'runtime\python.exe'
+if (Test-Path -LiteralPath $fortressBasePython) {
+    & $fortressBasePython -m venv $fortressVenv
+} else {
+    py -3 -m venv $fortressVenv
+}
 if ($LASTEXITCODE -ne 0) { throw 'Could not create activation environment' }
 $fortressPython = Join-Path $fortressVenv 'Scripts\python.exe'
 $fortressBin = Join-Path $fortressVenv 'Scripts'
@@ -648,13 +680,14 @@ No PowerShell activation script or execution-policy change is needed.
 ```powershell
 $ErrorActionPreference = 'Stop'
 $fortressAsset = 'fortress-v153-win-x64.zip'
+$ProgressPreference = 'SilentlyContinue'
 $fortressBase = 'https://github.com/tiliondev/fortress/releases/download/v153.0.8010.36'
 $fortressDownload = Join-Path $env:TEMP ('fortress-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fortressDownload | Out-Null
 $fortressArchive = Join-Path $fortressDownload $fortressAsset
 $fortressSums = Join-Path $fortressDownload 'SHA256SUMS'
-Invoke-WebRequest -Uri "$fortressBase/$fortressAsset" -OutFile $fortressArchive
-Invoke-WebRequest -Uri "$fortressBase/SHA256SUMS" -OutFile $fortressSums
+Invoke-WebRequest -UseBasicParsing -Uri "$fortressBase/$fortressAsset" -OutFile $fortressArchive
+Invoke-WebRequest -UseBasicParsing -Uri "$fortressBase/SHA256SUMS" -OutFile $fortressSums
 $fortressPattern = '^([0-9a-fA-F]{64})\s+\*?' + [regex]::Escape($fortressAsset) + '$'
 $fortressMatches = @(Get-Content -LiteralPath $fortressSums | ForEach-Object {
     if ($_ -match $fortressPattern) { $Matches[1] }
@@ -736,6 +769,27 @@ Follow the main flow above in order. This release ships a
 native Apple Silicon / arm64 engine. There is no macOS Intel artifact in
 v153.0.8010.36; use the main guide's supported remote-host path or a separately
 verified container.
+
+### Bootstrap Python on a clean Mac
+
+A clean macOS guest may have no usable Python. This recipe downloads the
+official universal installer and checks its pinned SHA-256 before installation.
+It requires the guest's administrator access. Count all of this work in setup
+time. This clean-Mac bootstrap is **not yet runtime-tested**; a stock developer
+runner does not validate it.
+
+<!-- recipe: mac-bootstrap -->
+```bash
+set -e
+fortress_python_pkg="$(mktemp -d)/python-3.13.16-macos11.pkg"
+curl --fail --location 'https://www.python.org/ftp/python/3.13.16/python-3.13.16-macos11.pkg' -o "$fortress_python_pkg"
+printf '%s  %s\n' '30666509020b4da0dd8bc2e773255f34d76b7bb80b66960a928d5f6daa0192d7' "$fortress_python_pkg" | shasum -a 256 --check
+pkgutil --check-signature "$fortress_python_pkg"
+sudo installer -pkg "$fortress_python_pkg" -target /
+sudo '/Applications/Python 3.13/Install Certificates.command'
+export PATH="/Library/Frameworks/Python.framework/Versions/3.13/bin:$PATH"
+python3 -c 'import sys; assert sys.version_info[:3] == (3, 13, 16)'
+```
 
 ### Install activation CLI and PATH
 
@@ -857,6 +911,14 @@ No other guides, repository mount, installer script, host home directory, key,
 or cache may be present at creation. The agent may subsequently install the
 public dependencies and release artifacts described in this file.
 
+Every OS in a qualifying comparison must receive the **same byte-for-byte
+AGENTS.md**, checked with SHA-256 before setup. Start with the base OS only:
+no added Python, Node, pip, Playwright, Fortress, license, or dependency cache.
+Record the initial inventory, actual base-image digest, mounts, architecture,
+and absent credentials. The controller may have tools; the tested guest may
+not inherit them. Do not use a stock CI runner directly as a clean OS, hide
+installed tools from PATH, or uninstall tools and call the result a clean image.
+
 For a bare container, install the Linux prerequisites as container root, then
 create an ordinary runtime account using this block. Run all remaining recipes
 as that account with its actual home directory:
@@ -874,7 +936,8 @@ sandbox must work independently. The user approves its link; the agent resumes
 after the CLI confirms receipt and saves the key. Do not fabricate approval
 or treat the user's permission as a substitute for server-issued credentials.
 
-The current comparison target is **39.3 seconds of automated installation and verification**, with
+The required pass is **less than 60 seconds** of automated installation and
+verification; **40 seconds or less** is the optimization target, with
 the human approval step assumed complete when the agent resumes. Measure the
 critical path, not the sum of parallel task durations. Report separately:
 
@@ -888,9 +951,11 @@ critical path, not the sum of parallel task durations. Report separately:
   smoke check, and a successful new-shell check.
 - Total wall time and automated time (wall time minus approval-gated idle).
 
-Never claim a 39.3-second end-to-end install when approval or downloads took
-longer. Record fresh-flow success for every qualifying result. Earlier trials
-that reused credentials are diagnostic baselines only.
+Count every dependency bootstrap, download, checksum, extraction, setup, engine
+start, and integration check. Use the same integration in every compared run.
+Record a failure rather than rounding 60 seconds down or stopping the timer
+at installation/approval. Record fresh-flow success for every qualifying result.
+Earlier trials using supplied keys or pre-equipped CI images are diagnostic only.
 
 Use this learning loop: record the exact OS/image and instruction hash, run the
 recipes, record the failing command, correct this file, and repeat in another
@@ -904,212 +969,211 @@ the actual browser version and secret-file permissions without reading the key
 into output. Linux containers validate Linux distributions only; native Windows
 and macOS require their own hosts/VMs and must not be reported as tested here.
 
-## Hosted sandbox replay
+## Clean sandbox controller
 
-For reproducible cross-platform measurements, the following optional runner
-replays the recipes in this file on a fresh stock hosted OS. It is a controlled
-recipe test, not a blind autonomous-agent evaluation. Python and system tools
-supplied by that OS image are recorded as part of the environment. No Fortress
-installation, cached Fortress download, or license may be supplied.
+This optional external controller runs the above recipes in a new Linux or
+Windows base-OS container. Extract it on the controller host after receiving
+this file, then run it with OS kind (`linux` or `windows`) and the official
+base-image reference. The guest initially receives only AGENTS.md. The
+controller's Python/container tools stay outside; they are not guest inputs.
+The controller verifies absent language runtimes/tools, absent Fortress state,
+no mounts, and the matching instruction hash before the installation timer.
+Linux uses rootless Podman; Windows uses Docker with a Windows Server base image.
 
-Extract this Python fence only after supplying AGENTS.md. Run `prepare`, expose
-only `activation-public.json` to the approving human, then run `finish`. The
-background worker performs the real activation. Never upload activation logs,
-the user's home, or `.tilion`; only the public approval link and `report.json`
-are intended for collection. Report CI orchestration time separately from both
-the human gate and automated work. Each job creates a separate activation flow.
+The report labels over-60-second or incomplete runs as failures, even if some
+installation steps succeeded. Only `activation-public.json` and `report.json`
+are collection outputs. Keep the controller running for the real approval and
+engine checks. Never upload the guest home or its key. A clean Mac requires its
+own supported host/VM; these containers cannot substitute for that test.
 
-<!-- recipe: sandbox-replay -->
+This is a controlled recipe replay, not a blind-agent test. Its installation
+commands and check definitions all come from this same file. Base OS shell,
+package manager, and system utilities are allowed; added development tools are
+not. Runtime/image preparation is outside the timer and reported separately.
+
+<!-- recipe: clean-sandbox-controller -->
 ```python
-"""Controlled recipe replay. The only supplied setup artifact is AGENTS.md."""
-import concurrent.futures
-import hashlib
-import json
-import os
+"""External controller; the clean guest receives only AGENTS.md."""
+import base64, concurrent.futures, hashlib, json, os, re, subprocess, sys, threading, time
 from pathlib import Path
-import platform
-import re
-import shutil
-import subprocess
-import sys
-import time
-import urllib.request
 
-os.umask(0o077)
-work = Path.cwd()
-doc = (work / 'AGENTS.md').read_text(encoding='utf-8')
-recipes = dict((name, (lang, body)) for name, lang, body in re.findall(
-    r'<!-- recipe: ([\w-]+) -->\n```(bash|powershell)\n(.*?)^```', doc, re.M | re.S))
-system = platform.system()
-prefix = {'Windows': 'windows', 'Darwin': 'mac', 'Linux': 'linux'}[system]
-root = Path.home() / '.tilion'
-venv = root / 'cli'
-bin_dir = venv / ('Scripts' if system == 'Windows' else 'bin')
-python = bin_dir / ('python.exe' if system == 'Windows' else 'python')
-cli = bin_dir / ('tilion-fortress.exe' if system == 'Windows' else 'tilion-fortress')
-state_path = work / 'sandbox-state.json'
-stage_records = []
+work=Path.cwd()
+source=work/'AGENTS.md'
+document=source.read_text(encoding='utf-8')
+recipes={n:(lang,body) for n,lang,body in re.findall(r'<!-- recipe: ([\w-]+) -->\n```(bash|powershell)\n(.*?)^```',document,re.M|re.S)}
+kind,image=sys.argv[1:3]
+windows=kind=='windows'
+runtime=['docker' if windows else 'podman']
+name='fortress-clean'
+user='ContainerUser' if windows else 'fortress'
+guest_home=r'C:\Users\ContainerUser' if windows else '/home/fortress'
+python=guest_home+(r'\.tilion\cli\Scripts\python.exe' if windows else '/.tilion/cli/bin/python')
+prefix='windows' if windows else 'linux'
+records=[]
+activation={}
+done=threading.Event()
+link_ready=threading.Event()
+report=dict(result='failed',kind=kind,image=image,input_files=['AGENTS.md'],integration='Python Playwright 1.63.0',
+ instruction_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),stages=records,
+ contract='base OS only; identical AGENTS.md; independent fresh key; under 60 seconds; aim for 40')
 
-def save(path, value):
-    temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(value, indent=2), encoding='utf-8')
-    temporary.replace(path)
+def save(name,value):
+ path=work/name
+ temporary=path.with_suffix('.tmp')
+ temporary.write_text(json.dumps(value,indent=2),encoding='utf-8')
+ temporary.replace(path)
 
-def command(stage, body, lang='bash', env=None):
-    start = time.monotonic()
-    script = work / ('generated-' + stage + ('.ps1' if lang == 'powershell' else '.sh'))
-    script.write_text(body, encoding='utf-8')
-    argv = (['pwsh', '-NoProfile', '-File', str(script)] if lang == 'powershell'
-            else ['bash', str(script)])
-    # Logs stay on this VM. Never upload the home directory or activation output.
-    with (work / (stage + '.log')).open('wb') as log:
-        result = subprocess.run(argv, stdout=log, stderr=subprocess.STDOUT, env=env)
-    row = dict(stage=stage, seconds=round(time.monotonic()-start, 3), exit_code=result.returncode)
-    stage_records.append(row)
-    print(json.dumps(row), flush=True)
-    if result.returncode:
-        # Installation recipes contain no credential values; keep other logs private.
-        if stage in ('cli', 'engine', 'playwright', 'prerequisites'):
-            print((work / (stage + '.log')).read_text(encoding='utf-8', errors='replace')[-5000:], flush=True)
-        raise RuntimeError(stage + ' failed')
+def host(args):
+ result=subprocess.run(runtime+args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+ if result.returncode:
+  print(result.stdout.decode('utf-8',errors='replace')[-5000:],flush=True)
+  raise RuntimeError('Container operation failed: '+args[0])
+ return result
 
-def recipe(stage, name, prologue='', env=None):
-    lang, body = recipes[name]
-    command(stage, prologue + '\n' + body, lang, env)
+def guest(args,account=None):
+ return runtime+['exec','-i','--user',account or user,name]+args
 
-def cli_setup():
-    recipe('cli', prefix + '-cli')
-    if system != 'Windows':
-        recipe('path', prefix + '-path')
-    env = os.environ.copy()
-    env['PYTHONUNBUFFERED'] = '1'
-    with (work / 'activation-worker.log').open('wb') as log:
-        subprocess.Popen([sys.executable, str(Path(__file__).resolve()), '_activate'],
-                         stdout=log, stderr=log, env=env,
-                         creationflags=subprocess.CREATE_NO_WINDOW if system == 'Windows' else 0)
-    command('playwright', ('& ' if system == 'Windows' else '') + '"' + str(python) + '" -m pip install --disable-pip-version-check --no-compile playwright==1.63.0' +
-            ("\nif ($LASTEXITCODE -ne 0) { throw 'Playwright install failed' }" if system == 'Windows' else ''),
-            'powershell' if system == 'Windows' else 'bash')
+def run(stage,body,account=None):
+ started=time.monotonic()
+ if windows:
+  encoded=base64.b64encode(body.encode('utf-16le')).decode()
+  args=guest(['powershell.exe','-NoProfile','-NonInteractive','-EncodedCommand',encoded],account)
+  data=None
+ else:
+  args=guest(['bash','-s'],account)
+  data=body.encode()
+ completed=subprocess.run(args,input=data,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+ output=completed.stdout.decode('utf-8',errors='replace')
+ (work/(stage+'.log')).write_text(output,encoding='utf-8')
+ row=dict(stage=stage,seconds=round(time.monotonic()-started,3),exit_code=completed.returncode)
+ records.append(row)
+ print(json.dumps(row),flush=True)
+ if completed.returncode:
+  if stage in ('bootstrap','engine','libraries','cli','playwright','inventory','preflight'): print(output[-6000:],flush=True)
+  raise RuntimeError(stage+' failed')
+ return output
 
-def engine_setup():
-    prologue = "$fortressRoot = Join-Path $env:USERPROFILE '.tilion'" if system == 'Windows' else 'set -e\numask 077'
-    recipe('engine', prefix + '-engine', prologue)
-
-def prepare():
-    assert not (root / 'license.jwt').exists(), 'Sandbox already has a key'
-    assert not root.exists(), 'Sandbox already has Fortress state'
-    assert 'TILION_LICENSE_KEY' not in os.environ, 'Injected key is forbidden'
-    assert platform.machine().lower() in ({'arm64', 'aarch64'} if system == 'Darwin' else {'amd64', 'x86_64', 'arm64', 'aarch64'})
-    started = time.monotonic()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-        tasks = [pool.submit(cli_setup), pool.submit(engine_setup)]
-        for task in tasks:
-            task.result()
-    if system == 'Linux':
-        binary = root / 'installs/v153.0.8010.36/fortress-v153/chrome'
-        dependencies = subprocess.check_output(['ldd', str(binary)], text=True)
-        if 'not found' in dependencies:
-            lang, body = recipes['linux-runtime-libraries']
-            command('prerequisites', 'set -e\nsudo apt-get update -qq\n' + body.replace(
-                'DEBIAN_FRONTEND=noninteractive apt-get', 'sudo DEBIAN_FRONTEND=noninteractive apt-get'))
-        recipe('preflight', 'linux-preflight')
-    deadline = time.monotonic() + 45
-    while not (work / 'activation-public.json').exists():
-        if (work / 'activation-result.json').exists() or time.monotonic() > deadline:
-            raise RuntimeError('Activation failed before issuing an approval URL')
-        time.sleep(.1)
-    ready = time.monotonic()
-    state = dict(started=started, ready=ready, stages=stage_records,
-                 system=system, architecture=platform.machine(),
-                 os_version=platform.platform(), image_os=os.getenv('ImageOS'), image_version=os.getenv('ImageVersion'),
-                 instruction_sha256=hashlib.sha256((work / 'AGENTS.md').read_bytes()).hexdigest(),
-                 input_files=['AGENTS.md'], integration='Python Playwright 1.63.0',
-                 trial='stock hosted OS; independent fresh activation; controlled recipe replay')
-    save(state_path, state)
-    print(json.dumps({'installation_ready_seconds':round(ready-started,3), 'system':system}), flush=True)
+def recipe(stage,tag,prologue='',account=None):
+ return run(stage,prologue+'\n'+recipes[tag][1],account)
 
 def activate():
-    env = os.environ.copy()
-    env['PYTHONUNBUFFERED'] = '1'
-    process = subprocess.Popen([str(python), '-u', '-m', 'tillion_fortress', 'activate', '--headless'],
-                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', env=env)
-    for line in process.stdout:
-        match = re.search(r'https://[^\s]+/activate\?code=[A-Z0-9-]+', line)
-        if match:
-            save(work / 'activation-public.json', dict(system=system, architecture=platform.machine(),
-                approval_url=match.group(0), user_code=match.group(0).split('code=')[1]))
-    save(work / 'activation-result.json', dict(exit_code=process.wait(), finished=time.monotonic()))
+ process=subprocess.Popen(guest([python,'-u','-m','tillion_fortress','activate','--headless']),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
+ for line in process.stdout:
+  match=re.search(r'https://[^\s]+/activate\?code=[A-Z0-9-]+',line)
+  if match:
+   activation['url_ready']=time.monotonic()
+   save('activation-public.json',dict(kind=kind,image=image,approval_url=match[0],user_code=match[0].split('code=')[1],instruction_sha256=report['instruction_sha256']))
+   link_ready.set()
+ activation.update(exit_code=process.wait(),finished=time.monotonic())
+ done.set()
+ link_ready.set()
 
-def finish():
-    state = json.loads(state_path.read_text())
-    deadline = time.monotonic() + 930
-    while not (work / 'activation-result.json').exists():
-        if time.monotonic() > deadline:
-            raise RuntimeError('Activation worker timed out')
-        time.sleep(.1)
-    activated = json.loads((work / 'activation-result.json').read_text())
-    assert activated['exit_code'] == 0, 'Real activation did not finish successfully'
-    verify_start = time.monotonic()
-    env = os.environ.copy()
-    env['PATH'] = str(bin_dir) + os.pathsep + env['PATH']
-    license_path = root / 'license.jwt'
-    assert license_path.stat().st_size > 0
-    if system == 'Windows':
-        prologue = "\n".join(["$fortressRoot = Join-Path $env:USERPROFILE '.tilion'", "$fortressCli = Join-Path $fortressRoot 'cli\\Scripts\\tilion-fortress.exe'"])
-    else:
-        prologue = 'export PATH="$HOME/.tilion/cli/bin:$PATH"'
-    recipe('license-permissions', prefix + '-license', prologue, env)
-    status = json.loads(subprocess.check_output([str(cli), 'license', 'status', '--json'], env=env))
-    assert status['licensed'] and status['mode'] == 'v3'
-    launchers = list((root / 'installs/v153.0.8010.36').rglob('tillion.cmd' if system == 'Windows' else 'tilion'))
-    launchers = [p for p in launchers if p.is_file()]
-    assert len(launchers) == 1
-    launcher = launchers[0]
-    if system == 'Windows':
-        quoted = str(launcher).replace("'", "''")
-        recipe('engine-start', 'windows-start', prologue + "\n$fortressLauncher = '" + quoted + "'", env)
-    else:
-        import shlex
-        recipe('engine-start', prefix + '-start', 'set -e\nfortress_launcher=' + shlex.quote(str(launcher)), env)
-    deadline = time.monotonic() + 60
-    while True:
-        try:
-            with urllib.request.urlopen('http://127.0.0.1:9222/json/version', timeout=2) as response:
-                version = json.load(response)
-            assert version['Browser'] == 'Chrome/153.0.8010.36' and version['webSocketDebuggerUrl']
-            break
-        except (OSError, AssertionError):
-            if time.monotonic() >= deadline:
-                raise
-            time.sleep(.1)
-    smoke = re.findall(r'^```python\n(.*?)^```', doc, re.M | re.S)[0]
-    subprocess.run([str(python), '-c', smoke], check=True, env=env)
-    if system == 'Windows':
-        check = "$env:Path = [Environment]::GetEnvironmentVariable('Path','User') + ';' + [Environment]::GetEnvironmentVariable('Path','Machine'); (Get-Command tilion-fortress).Source; tilion-fortress license status --json"
-        subprocess.run(['pwsh', '-NoProfile', '-Command', check], check=True)
-    else:
-        subprocess.run(['zsh' if system == 'Darwin' else 'bash', '-ic', 'command -v tilion-fortress; tilion-fortress license status --json'], check=True, env=env)
-    with urllib.request.urlopen('http://127.0.0.1:9222/json/version', timeout=2) as response:
-        assert json.load(response)['Browser'] == version['Browser']
-    for logfile in (root / 'logs').glob('*.log'):
-        log = logfile.read_text(encoding='utf-8', errors='replace')
-        assert not re.search(r'invalid.*licen[cs]e|licen[cs]e.*(?:invalid|reject)|falling back|fallback.*v1', log, re.I), 'Engine reported rejected activation'
-    if system != 'Windows':
-        assert license_path.stat().st_mode & 0o777 == 0o600
-    finished = time.monotonic()
-    idle = max(0, activated['finished']-state['ready'])
-    # CI artifact handoff can delay the next step after approval; report it
-    # separately rather than attributing scheduler delay to installation.
-    orchestration = max(0, verify_start-max(state['ready'], activated['finished']))
-    report = dict(state, browser=version['Browser'], fresh_activation=True,
-        total_seconds=round(finished-state['started'],3), approval_gated_idle_seconds=round(idle,3),
-        orchestration_seconds=round(orchestration,3),
-        automated_seconds=round((state['ready']-state['started'])+(finished-verify_start),3),
-        installation_ready_seconds=round(state['ready']-state['started'],3),
-        after_approval_seconds=round(finished-verify_start,3), result='passed', verification_stages=stage_records)
-    save(work / 'report.json', report)
-    print(json.dumps(report), flush=True)
+def cli_install():
+ if windows: recipe('bootstrap','windows-bootstrap')
+ recipe('cli',prefix+'-cli')
+ if not windows: recipe('path','linux-path')
+ threading.Thread(target=activate,daemon=True).start()
+ command=('& ' if windows else 'set -e\n')+'"'+python+'" -m pip install --disable-pip-version-check --no-compile playwright==1.63.0'
+ if windows: command+="\nif ($LASTEXITCODE -ne 0) { throw 'Playwright install failed' }"
+ run('playwright',command)
 
-{'prepare': prepare, '_activate': activate, 'finish': finish}[sys.argv[1]]()
+def main():
+ preparation=time.monotonic()
+ host(['pull',image])
+ flags=['run','--detach','--name',name,'--label','purpose=fortress-clean','--memory','4g']
+ if windows:
+  host(flags+['--user',user,image,'powershell.exe','-NoProfile','-Command','Start-Sleep -Seconds 86400'])
+  host(['exec','--user','ContainerAdministrator',name,'powershell.exe','-NoProfile','-Command',r'New-Item -ItemType Directory C:\instructions | Out-Null'])
+  destination=r'C:\instructions\AGENTS.md'
+ else:
+  host(flags+['--cpus','2','--pids-limit','1024','--shm-size','1g','--network','slirp4netns',image,'sleep','infinity'])
+  host(['exec',name,'mkdir','-p','/instructions'])
+  destination='/instructions/AGENTS.md'
+ host(['cp',str(source),name+':'+destination])
+ info=json.loads(host(['inspect',name]).stdout)[0]
+ assert info['Mounts']==[], 'Unexpected host mounts'
+ report.update(mounts=[],image_id=info['Image'],image_digests=json.loads(host(['image','inspect',image]).stdout)[0].get('RepoDigests'))
+ if windows:
+  inventory=r'''$ErrorActionPreference='Stop'
+if (@(Get-ChildItem C:\instructions -File).Count -ne 1) { throw 'Extra input files' }
+foreach ($tool in @('python','python3','py','pip','node','npm','git','pwsh')) {
+ if (Get-Command $tool -ErrorAction SilentlyContinue) { throw "Preinstalled tool: $tool" }
+}
+if (Test-Path (Join-Path $env:USERPROFILE '.tilion')) { throw 'Existing Fortress state' }
+if (Test-Path Env:TILION_LICENSE_KEY) { throw 'Supplied key' }
+(Get-FileHash C:\instructions\AGENTS.md -Algorithm SHA256).Hash.ToLower()
+'''
+ else:
+  inventory=r'''set -e
+test "$(find /instructions -type f | wc -l)" -eq 1
+for tool in python python3 pip pip3 node npm git; do
+ if command -v "$tool" >/dev/null 2>&1; then printf 'Preinstalled tool: %s\n' "$tool"; exit 1; fi
+done
+test -z "${TILION_LICENSE_KEY+x}"
+test ! -d /home/fortress/.tilion
+sha256sum /instructions/AGENTS.md
+'''
+ initial=run('inventory',inventory,None if windows else 'root')
+ assert report['instruction_sha256'] in initial, 'Instruction bytes differ'
+ report['sandbox_prepare_seconds']=round(time.monotonic()-preparation,3)
+ started=time.monotonic()
+ if not windows:
+  recipe('runtime-user','sandbox-user',account='root')
+  recipe('bootstrap','linux-prerequisites',account='root')
+ with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+  tasks=[pool.submit(cli_install),pool.submit(recipe,'engine',prefix+'-engine',"$fortressRoot = Join-Path $env:USERPROFILE '.tilion'" if windows else 'set -e\numask 077')]
+  if not windows: tasks.append(pool.submit(recipe,'libraries','linux-runtime-libraries','', 'root'))
+  for future in tasks: future.result()
+ if not windows: recipe('preflight','linux-preflight')
+ assert link_ready.wait(40) and 'url_ready' in activation, 'No approval URL'
+ gate=time.monotonic()
+ report['installation_ready_seconds']=round(gate-started,3)
+ print(json.dumps({'installation_ready_seconds':report['installation_ready_seconds']}),flush=True)
+ assert done.wait(930), 'Activation timed out'
+ assert activation['exit_code']==0, 'Fresh approval did not complete'
+ resumed=time.monotonic()
+ prologue=("$fortressRoot = Join-Path $env:USERPROFILE '.tilion'\n$fortressCli = Join-Path $fortressRoot 'cli\\Scripts\\tilion-fortress.exe'" if windows else 'set -e\nexport PATH="$HOME/.tilion/cli/bin:$PATH"')
+ recipe('license-permissions',prefix+'-license',prologue)
+ status="import json,subprocess,sys; s=json.loads(subprocess.check_output([sys.executable,'-m','tillion_fortress','license','status','--json'])); assert s['licensed'] and s['mode']=='v3'; print('Saved license is live')"
+ subprocess.run(guest([python,'-c',status]),check=True)
+ prologue+=("\n$fortressLauncher = (Get-ChildItem (Join-Path $fortressRoot 'installs\\v153.0.8010.36') -Recurse -File -Filter tillion.cmd).FullName" if windows else '\nfortress_launcher="$HOME/.tilion/installs/v153.0.8010.36/fortress-v153/tilion"')
+ recipe('engine-start',prefix+'-start',prologue)
+ smoke=re.findall(r'^```python\n(.*?)^```',document,re.M|re.S)[0]
+ checks=r'''import json,time,urllib.request,stat,re,os
+from pathlib import Path
+deadline=time.monotonic()+60
+while True:
+ try:
+  with urllib.request.urlopen('http://127.0.0.1:9222/json/version',timeout=2) as r: version=json.load(r)
+  assert version['Browser']=='Chrome/153.0.8010.36' and version['webSocketDebuggerUrl']
+  break
+ except (OSError,AssertionError):
+  if time.monotonic()>deadline: raise
+  time.sleep(.1)
+'''+smoke+r'''
+root=Path.home()/'.tilion'
+for log in (root/'logs').glob('*.log'):
+ assert not re.search(r'invalid.*licen[cs]e|licen[cs]e.*(?:invalid|reject)|falling back|fallback.*v1',log.read_text(errors='replace'),re.I), 'Engine rejected the license'
+with urllib.request.urlopen('http://127.0.0.1:9222/json/version',timeout=2) as r: assert json.load(r)['Browser']==version['Browser']
+if os.name!='nt': assert stat.S_IMODE((root/'license.jwt').stat().st_mode)==0o600
+print('Browser version, Playwright page, and client disconnect passed')
+'''
+ subprocess.run(guest([python,'-']),input=checks.encode(),check=True)
+ resume=("$ErrorActionPreference='Stop'; $env:Path=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); (Get-Command tilion-fortress).Source; tilion-fortress license status --json; if ($LASTEXITCODE -ne 0) { throw 'Resume failed' }" if windows else "set -e\nbash -ic 'command -v tilion-fortress; tilion-fortress license status --json' </dev/null")
+ run('new-session',resume)
+ finished=time.monotonic()
+ idle=max(0,activation['finished']-gate)
+ automated=finished-started-idle
+ report.update(result='passed' if automated<60 else 'over-limit',fresh_activation=True,automated_seconds=round(automated,3),total_seconds=round(finished-started,3),approval_gated_idle_seconds=round(idle,3),after_approval_seconds=round(finished-resumed,3),under_60_seconds=automated<60,at_most_40_seconds=automated<=40,browser='Chrome/153.0.8010.36')
+
+try:
+ main()
+except Exception as error:
+ report['error']=type(error).__name__+': '+str(error)
+ print(report['error'],flush=True)
+finally:
+ save('report.json',report)
+ print(json.dumps(report),flush=True)
+sys.exit(0 if report['result']=='passed' else 1)
 
 ```

@@ -1,0 +1,87 @@
+name: Fortress from a clean base OS
+on:
+  push:
+    branches: [codex/fortress-os-sandboxes]
+    paths: [AGENTS.md, .github/workflows/onboarding-clean.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fortress-clean-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  clean-install:
+    name: ${{ matrix.label }} base OS only
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: ubuntu-x64, host: ubuntu-24.04, kind: linux, image: 'docker.io/library/ubuntu:24.04'}
+          - {label: debian-x64, host: ubuntu-24.04, kind: linux, image: 'docker.io/library/debian:12-slim'}
+          - {label: ubuntu-arm64, host: ubuntu-24.04-arm, kind: linux, image: 'docker.io/library/ubuntu:24.04'}
+          - {label: windows-x64, host: windows-2025, kind: windows, image: 'mcr.microsoft.com/windows/server:ltsc2025'}
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Prepare controller runtime outside the tested guest
+        if: matrix.kind == 'linux'
+        shell: bash
+        run: |
+          set -e
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          if ! grep -q "^$(id -un):" /etc/subuid; then
+            sudo usermod --add-subuids 1000000-1065535 --add-subgids 1000000-1065535 "$(id -un)"
+          fi
+          podman info --format '{{.Host.Security.Rootless}}'
+      - name: Fetch the single instruction file and launch its external controller
+        env:
+          FORTRESS_TEST_KIND: ${{ matrix.kind }}
+          FORTRESS_TEST_IMAGE: ${{ matrix.image }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory instructions | Out-Null
+          Set-Location instructions
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/AGENTS.md" -OutFile AGENTS.md
+          $python = if ($IsWindows) { (Get-Command python).Source } else { (Get-Command python3).Source }
+          & $python -c 'import pathlib,re; s=pathlib.Path("AGENTS.md").read_text(encoding="utf-8"); m=re.search(r"<!-- recipe: clean-sandbox-controller -->\n```python\n(.*?)^```",s,re.M|re.S); assert m; pathlib.Path("clean_replay.py").write_text(m[1],encoding="utf-8")'
+          if ($LASTEXITCODE -ne 0) { throw 'Controller extraction failed' }
+          & $python -c 'import os,subprocess,sys; log=open("controller.log","wb"); subprocess.Popen([sys.executable,"-u","clean_replay.py",os.environ["FORTRESS_TEST_KIND"],os.environ["FORTRESS_TEST_IMAGE"]],stdout=log,stderr=log,creationflags=0x08000000 if os.name=="nt" else 0)'
+          $deadline = (Get-Date).AddMinutes(20)
+          while (!(Test-Path activation-public.json) -and !(Test-Path report.json)) {
+            if ((Get-Date) -gt $deadline) { throw 'Sandbox preparation or installation timed out' }
+            Start-Sleep -Seconds 2
+          }
+          if (!(Test-Path activation-public.json)) {
+            Get-Content controller.log
+            throw 'Clean installation failed before approval'
+          }
+      - name: Return the guest's own approval link
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: clean-approval-${{ matrix.label }}
+          path: instructions/activation-public.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Await independent activation and complete verification
+        working-directory: instructions
+        run: |
+          $deadline = (Get-Date).AddMinutes(17)
+          while (!(Test-Path report.json)) {
+            if ((Get-Date) -gt $deadline) { throw 'Activation or verification timed out' }
+            Start-Sleep -Seconds 2
+          }
+          Get-Content controller.log
+          $result = Get-Content report.json -Raw | ConvertFrom-Json
+          if ($result.result -ne 'passed') { throw "Clean install result: $($result.result)" }
+      - name: Collect non-secret result including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: clean-result-${{ matrix.label }}
+          path: instructions/report.json
+          if-no-files-found: warn
+          retention-days: 7

@@ -1,9 +1,6 @@
-name: Independent Fortress onboarding sandboxes
+name: Diagnostic Fortress onboarding on pre-equipped hosts
 
 on:
-  push:
-    branches: [codex/fortress-os-sandboxes]
-    paths: [AGENTS.md, .github/workflows/onboarding-sandboxes.yml]
   workflow_dispatch:
 
 permissions:
