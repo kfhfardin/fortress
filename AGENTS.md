@@ -115,14 +115,18 @@ with `-u -m tillion_fortress activate --headless` on any OS.
    **"Open this link, sign in with your email or preferred account, complete
    any email verification, and approve this device. Tell me when you've
    finished; I'll verify the saved key and start Fortress."**
-2. Mark `awaiting_user`. Keep the activation process alive while the user
+2. Make the link clickable and open it in the user's browser when available.
+   Ask the user to finish the web page's device-approval step, not just sign in
+   or confirm in chat. If they cannot open the page, resolve that access problem
+   before waiting for a key. Do not request or paste a displayed license key.
+3. Mark `awaiting_user`. Keep the activation process alive while the user
    completes the flow; it polls and writes `license.jwt` itself. Do not access
    their inbox or send email without explicit permission. Do not treat elapsed
    time or the user's message alone as proof of successful activation.
-3. Check process success, the nonempty saved file, and license status. Apply
+4. Check process success, the nonempty saved file, and license status. Apply
    the selected OS guide's permissions. Never fabricate a JWT or ask the user
    to paste the secret into chat.
-4. Mark `activated` and continue to engine startup automatically.
+5. Mark `activated` and continue to engine startup automatically.
 
 If approval times out or the agent session ends, check status/file first when
 resuming. If activation did not finish, run it again and show a **new** URL/code.
@@ -615,20 +619,29 @@ If Python is absent, run this block before the CLI recipe. Its download and
 installation count toward setup time and may overlap the engine download.
 The pinned installer/hash come from the official Python 3.13.16 release.
 
+The default is a per-user installation. On a Windows Server container, run
+this prerequisite block as `ContainerAdministrator` with
+`$fortressMachineBootstrap = $true`; it installs the runtime under Program
+Files. Run CLI setup, activation, and the engine as `ContainerUser` afterward.
+On a managed desktop, installer error 1625 means installation is blocked by
+policy: use an administrator-approved installation, without disabling the
+policy. Count the prerequisite installation in setup time in either case.
+
 <!-- recipe: windows-bootstrap -->
 ```powershell
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $fortressRoot = Join-Path $env:USERPROFILE '.tilion'
-$fortressRuntime = Join-Path $fortressRoot 'runtime'
+$fortressAllUsers = if ($fortressMachineBootstrap) { 1 } else { 0 }
+$fortressRuntime = if ($fortressAllUsers) { Join-Path $env:ProgramFiles 'Fortress\Python313' } else { Join-Path $fortressRoot 'runtime' }
 $fortressBootstrapPython = Join-Path $fortressRuntime 'python.exe'
 if (Test-Path -LiteralPath $fortressBootstrapPython) { throw 'Expected a fresh Python runtime directory' }
 $fortressPythonInstaller = Join-Path $env:TEMP ('fortress-python-' + [guid]::NewGuid().ToString('N') + '.exe')
 Invoke-WebRequest -UseBasicParsing -Uri 'https://www.python.org/ftp/python/3.13.16/python-3.13.16-amd64.exe' -OutFile $fortressPythonInstaller
 $fortressPythonHash = 'fb4f9f5d438b2396da0086dc70b935c530cb578e37adc6d354f7ad2037fee83b'
 if ((Get-FileHash -LiteralPath $fortressPythonInstaller -Algorithm SHA256).Hash -ne $fortressPythonHash) { throw 'Python installer checksum mismatch' }
-$fortressPythonArgs = '/quiet InstallAllUsers=0 TargetDir="{0}" Include_pip=1 Include_launcher=0 Include_test=0 Include_doc=0 Include_tcltk=0 Include_dev=0 AssociateFiles=0 Shortcuts=0 PrependPath=0' -f $fortressRuntime
+$fortressPythonArgs = '/quiet InstallAllUsers={0} TargetDir="{1}" Include_pip=1 Include_launcher=0 Include_test=0 Include_doc=0 Include_tcltk=0 Include_dev=0 AssociateFiles=0 Shortcuts=0 PrependPath=0' -f $fortressAllUsers,$fortressRuntime
 $fortressPythonInstall = Start-Process -FilePath $fortressPythonInstaller -ArgumentList $fortressPythonArgs -WindowStyle Hidden -Wait -PassThru
 if ($fortressPythonInstall.ExitCode -ne 0) { throw "Python installation failed: $($fortressPythonInstall.ExitCode)" }
 & $fortressBootstrapPython -c 'import sys; assert sys.version_info[:3] == (3,13,16)'
@@ -647,6 +660,9 @@ $fortressRoot = Join-Path $env:USERPROFILE '.tilion'
 $fortressVenv = Join-Path $fortressRoot 'cli'
 New-Item -ItemType Directory -Force -Path $fortressRoot | Out-Null
 $fortressBasePython = Join-Path $fortressRoot 'runtime\python.exe'
+if (!(Test-Path -LiteralPath $fortressBasePython)) {
+    $fortressBasePython = Join-Path $env:ProgramFiles 'Fortress\Python313\python.exe'
+}
 if (Test-Path -LiteralPath $fortressBasePython) {
     & $fortressBasePython -m venv $fortressVenv
 } else {
@@ -1011,6 +1027,8 @@ python=guest_home+(r'\.tilion\cli\Scripts\python.exe' if windows else '/.tilion/
 prefix='windows' if windows else 'linux'
 records=[]
 activation={}
+active_stages={}
+state_lock=threading.RLock()
 done=threading.Event()
 link_ready=threading.Event()
 report=dict(result='failed',kind=kind,image=image,input_files=['AGENTS.md'],integration='Python Playwright 1.63.0',
@@ -1022,6 +1040,16 @@ def save(name,value):
  temporary=path.with_suffix('.tmp')
  temporary.write_text(json.dumps(value,indent=2),encoding='utf-8')
  temporary.replace(path)
+
+def checkpoint():
+ with state_lock:
+  save('checkpoint.json',dict(instruction_sha256=report['instruction_sha256'],
+   stages=list(records),active_stages=list(active_stages),
+   activation_url_ready='url_ready' in activation,
+   activation_finished='finished' in activation,
+   activation_exit_code=activation.get('exit_code'),
+   activation_outcome=activation.get('outcome'),
+   installation_ready_seconds=report.get('installation_ready_seconds')))
 
 def host(args):
  result=subprocess.run(runtime+args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
@@ -1035,6 +1063,9 @@ def guest(args,account=None):
 
 def run(stage,body,account=None):
  started=time.monotonic()
+ with state_lock:
+  active_stages[stage]=started
+  checkpoint()
  if windows:
   encoded=base64.b64encode(body.encode('utf-16le')).decode()
   args=guest(['powershell.exe','-NoProfile','-NonInteractive','-EncodedCommand',encoded],account)
@@ -1046,7 +1077,10 @@ def run(stage,body,account=None):
  output=completed.stdout.decode('utf-8',errors='replace')
  (work/(stage+'.log')).write_text(output,encoding='utf-8')
  row=dict(stage=stage,seconds=round(time.monotonic()-started,3),exit_code=completed.returncode)
- records.append(row)
+ with state_lock:
+  records.append(row)
+  active_stages.pop(stage,None)
+  checkpoint()
  print(json.dumps(row),flush=True)
  if completed.returncode:
   if stage in ('bootstrap','engine','libraries','cli','playwright','inventory','preflight'): print(output[-6000:],flush=True)
@@ -1057,19 +1091,29 @@ def recipe(stage,tag,prologue='',account=None):
  return run(stage,prologue+'\n'+recipes[tag][1],account)
 
 def activate():
- process=subprocess.Popen(guest([python,'-u','-m','tillion_fortress','activate','--headless']),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
- for line in process.stdout:
-  match=re.search(r'https://[^\s]+/activate\?code=[A-Z0-9-]+',line)
-  if match:
-   activation['url_ready']=time.monotonic()
-   save('activation-public.json',dict(kind=kind,image=image,approval_url=match[0],user_code=match[0].split('code=')[1],instruction_sha256=report['instruction_sha256']))
-   link_ready.set()
- activation.update(exit_code=process.wait(),finished=time.monotonic())
- done.set()
- link_ready.set()
+ try:
+  process=subprocess.Popen(guest([python,'-u','-m','tillion_fortress','activate','--headless']),stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
+  for line in process.stdout:
+   if 'activation timed out' in line: activation['outcome']='approval_expired'
+   elif 'cannot reach' in line: activation['outcome']='network_error'
+   elif 'Activated (' in line: activation['outcome']='key_saved'
+   match=re.search(r'https://[^\s]+/activate\?code=[A-Z0-9-]+',line)
+   if match:
+    activation['url_ready']=time.monotonic()
+    save('activation-public.json',dict(kind=kind,image=image,approval_url=match[0],user_code=match[0].split('code=')[1],instruction_sha256=report['instruction_sha256']))
+    link_ready.set()
+    checkpoint()
+  activation['exit_code']=process.wait()
+ except Exception as error:
+  activation.update(exit_code=-1,error_type=type(error).__name__)
+ finally:
+  activation['finished']=time.monotonic()
+  checkpoint()
+  done.set()
+  link_ready.set()
 
 def cli_install():
- if windows: recipe('bootstrap','windows-bootstrap')
+ if windows: recipe('bootstrap','windows-bootstrap','$fortressMachineBootstrap = $true','ContainerAdministrator')
  recipe('cli',prefix+'-cli')
  if not windows: recipe('path','linux-path')
  threading.Thread(target=activate,daemon=True).start()
@@ -1128,6 +1172,7 @@ sha256sum /instructions/AGENTS.md
  assert link_ready.wait(40) and 'url_ready' in activation, 'No approval URL'
  gate=time.monotonic()
  report['installation_ready_seconds']=round(gate-started,3)
+ checkpoint()
  print(json.dumps({'installation_ready_seconds':report['installation_ready_seconds']}),flush=True)
  assert done.wait(930), 'Activation timed out'
  assert activation['exit_code']==0, 'Fresh approval did not complete'
@@ -1172,6 +1217,7 @@ except Exception as error:
  report['error']=type(error).__name__+': '+str(error)
  print(report['error'],flush=True)
 finally:
+ report['activation']={key:activation[key] for key in ('exit_code','outcome','error_type') if key in activation}
  save('report.json',report)
  print(json.dumps(report),flush=True)
 sys.exit(0 if report['result']=='passed' else 1)

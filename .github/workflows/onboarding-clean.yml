@@ -49,9 +49,10 @@ jobs:
           $python = if ($IsWindows) { (Get-Command python).Source } else { (Get-Command python3).Source }
           & $python -c 'import pathlib,re; s=pathlib.Path("AGENTS.md").read_text(encoding="utf-8"); m=re.search(r"<!-- recipe: clean-sandbox-controller -->\n```python\n(.*?)^```",s,re.M|re.S); assert m; pathlib.Path("clean_replay.py").write_text(m[1],encoding="utf-8")'
           if ($LASTEXITCODE -ne 0) { throw 'Controller extraction failed' }
-          & $python -c 'import os,subprocess,sys; log=open("controller.log","wb"); subprocess.Popen([sys.executable,"-u","clean_replay.py",os.environ["FORTRESS_TEST_KIND"],os.environ["FORTRESS_TEST_IMAGE"]],stdout=log,stderr=log,creationflags=0x08000000 if os.name=="nt" else 0)'
+          & $python -c 'import os,pathlib,subprocess,sys; log=open("controller.log","wb"); p=subprocess.Popen([sys.executable,"-u","clean_replay.py",os.environ["FORTRESS_TEST_KIND"],os.environ["FORTRESS_TEST_IMAGE"]],stdin=subprocess.DEVNULL,stdout=log,stderr=log,creationflags=0x08000000 if os.name=="nt" else 0,start_new_session=os.name!="nt"); pathlib.Path("controller.pid").write_text(str(p.pid))'
           $deadline = (Get-Date).AddMinutes(20)
           while (!(Test-Path activation-public.json) -and !(Test-Path report.json)) {
+            if (!(Get-Process -Id (Get-Content controller.pid) -ErrorAction SilentlyContinue)) { Get-Content controller.log; throw 'Controller exited before producing a result' }
             if ((Get-Date) -gt $deadline) { throw 'Sandbox preparation or installation timed out' }
             Start-Sleep -Seconds 2
           }
@@ -66,11 +67,19 @@ jobs:
           path: instructions/activation-public.json
           if-no-files-found: error
           retention-days: 1
+      - name: Collect current diagnostic checkpoint
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: clean-checkpoint-${{ matrix.label }}
+          path: instructions/checkpoint.json
+          if-no-files-found: error
+          retention-days: 1
       - name: Await independent activation and complete verification
         working-directory: instructions
         run: |
           $deadline = (Get-Date).AddMinutes(17)
           while (!(Test-Path report.json)) {
+            if (!(Get-Process -Id (Get-Content controller.pid) -ErrorAction SilentlyContinue)) { Get-Content controller.log; throw 'Controller exited before producing a result' }
             if ((Get-Date) -gt $deadline) { throw 'Activation or verification timed out' }
             Start-Sleep -Seconds 2
           }
@@ -82,6 +91,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: clean-result-${{ matrix.label }}
-          path: instructions/report.json
+          path: |
+            instructions/report.json
+            instructions/checkpoint.json
+            instructions/controller.log
           if-no-files-found: warn
           retention-days: 7
